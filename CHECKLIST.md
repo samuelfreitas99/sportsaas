@@ -141,7 +141,7 @@
 
 ---
 
-## 🟡 2B.11 RBAC Refinado
+## ✅ 2B.11 RBAC Refinado
 
 OWNER / ADMIN:
 
@@ -161,18 +161,21 @@ Geral:
 
 ---
 
-## 🟡 2B.12 Smoke Tests Consolidados
+## ✅ 2B.12 Smoke Tests Consolidados
 
 Objetivo: validar sistema completo após cada fase.
 
-* [ ] Login test
-* [ ] Attendance test
-* [ ] Guest test
-* [ ] Draft test
-* [ ] Captain test
-* [ ] docker compose up -d --build
-* [ ] alembic upgrade head
-* [ ] npm run build
+* [x] Login test
+* [x] Games test
+* [x] Attendance test
+* [x] Guest test
+* [x] Captain test
+* [x] Draft test
+* [ ] RBAC test (opcional — requer conta MEMBER separada)
+
+* [x] docker compose up -d --build
+* [x] alembic upgrade head
+* [x] npm run build
 
 
 ---

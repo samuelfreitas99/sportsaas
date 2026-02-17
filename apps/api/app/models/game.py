@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, func, ForeignKey, Enum, Text
+from sqlalchemy import String, DateTime, func, ForeignKey, Enum, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,11 +40,20 @@ class Game(Base):
 
 class GameAttendance(Base):
     __tablename__ = "game_attendance"
+    __table_args__ = (
+        UniqueConstraint("org_member_id", "game_id", name="uq_game_attendance_org_member_game"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     game_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("games.id"), nullable=False, index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
+    )
+    org_member_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=False, index=True
+    )
 
     status: Mapped[AttendanceStatus] = mapped_column(
         Enum(AttendanceStatus, name="attendance_status"),
@@ -59,3 +68,4 @@ class GameAttendance(Base):
 
     game = relationship("Game", back_populates="attendances")
     user = relationship("User")
+    org_member = relationship("OrgMember")

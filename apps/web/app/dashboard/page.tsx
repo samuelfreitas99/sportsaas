@@ -32,6 +32,18 @@ interface LedgerSummary {
   balance: number
 }
 
+type AttendanceStatus = 'GOING' | 'MAYBE' | 'NOT_GOING'
+
+type AttendanceSummary = {
+  counts: { going: number; maybe: number; not_going: number }
+  my_status?: AttendanceStatus | null
+  going_members: Array<{
+    id: string
+    nickname?: string | null
+    user: { email: string; full_name?: string | null; avatar_url?: string | null }
+  }>
+}
+
 export default function Dashboard() {
   const [orgs, setOrgs] = useState<Org[]>([])
   const [selectedOrg, setSelectedOrg] = useState<Org | null>(null)
@@ -39,6 +51,7 @@ export default function Dashboard() {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [attendanceByGame, setAttendanceByGame] = useState<Record<string, AttendanceSummary>>({})
   const [newOrgName, setNewOrgName] = useState('')
   const [newGame, setNewGame] = useState({ title: '', sport: '', location: '', start_at: '' })
   const [newLedger, setNewLedger] = useState({
@@ -59,10 +72,12 @@ export default function Dashboard() {
       fetchGames(selectedOrg.id)
       fetchSummary(selectedOrg.id)
       fetchLedger(selectedOrg.id)
+      setAttendanceByGame({})
     } else {
       setGames([])
       setLedgerEntries([])
       setSummary(null)
+      setAttendanceByGame({})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrg])
@@ -173,14 +188,22 @@ export default function Dashboard() {
     }
     }
 
-    const markAttendance = async (gameId: string, status: string) => {
+    const fetchAttendance = async (orgId: string, gameId: string) => {
     try {
-        await api.post(`/games/${gameId}/attendance`, { status })
-        // opcional: refetch games (se depois você incluir status no retorno)
-        alert('Attendance marked!')
+        const res = await api.get(`/orgs/${orgId}/games/${gameId}/attendance`)
+        setAttendanceByGame(prev => ({ ...prev, [gameId]: res.data }))
     } catch (err) {
         console.error(err)
-        alert('Failed to mark attendance')
+    }
+    }
+
+    const setAttendance = async (orgId: string, gameId: string, status: AttendanceStatus) => {
+    try {
+        const res = await api.put(`/orgs/${orgId}/games/${gameId}/attendance`, { status })
+        setAttendanceByGame(prev => ({ ...prev, [gameId]: res.data }))
+    } catch (err) {
+        console.error(err)
+        alert('Failed to set attendance')
     }
     }
 
@@ -354,37 +377,76 @@ export default function Dashboard() {
                   {games.map(game => (
                     <div
                       key={game.id}
-                      className="border p-4 rounded flex justify-between items-center"
+                      className="border p-4 rounded"
                     >
-                      <div>
-                        <h3 className="font-bold">{game.title}</h3>
-                        <p className="text-sm text-gray-600">
-                          {game.sport} @ {game.location}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {new Date(game.start_at).toLocaleString()}
-                        </p>
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <h3 className="font-bold">{game.title}</h3>
+                          <p className="text-sm text-gray-600">
+                            {game.sport} @ {game.location}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(game.start_at).toLocaleString()}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => selectedOrg && setAttendance(selectedOrg.id, game.id, 'GOING')}
+                            className="bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200"
+                          >
+                            Going
+                          </button>
+                          <button
+                            onClick={() => selectedOrg && setAttendance(selectedOrg.id, game.id, 'MAYBE')}
+                            className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200"
+                          >
+                            Maybe
+                          </button>
+                          <button
+                            onClick={() => selectedOrg && setAttendance(selectedOrg.id, game.id, 'NOT_GOING')}
+                            className="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
+                          >
+                            Not Going
+                          </button>
+                          <button
+                            onClick={() => selectedOrg && fetchAttendance(selectedOrg.id, game.id)}
+                            className="border px-3 py-1 rounded hover:bg-gray-50"
+                          >
+                            Refresh
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => markAttendance(game.id, 'GOING')}
-                          className="bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200"
-                        >
-                          Going
-                        </button>
-                        <button
-                          onClick={() => markAttendance(game.id, 'MAYBE')}
-                          className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded hover:bg-yellow-200"
-                        >
-                          Maybe
-                        </button>
-                        <button
-                          onClick={() => markAttendance(game.id, 'NOT_GOING')}
-                          className="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
-                        >
-                          Not Going
-                        </button>
-                      </div>
+
+                      {attendanceByGame[game.id] && (
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="text-sm">
+                            <div className="text-gray-500">Counts</div>
+                            <div className="flex gap-3">
+                              <span className="text-green-700">GOING: {attendanceByGame[game.id].counts.going}</span>
+                              <span className="text-yellow-700">MAYBE: {attendanceByGame[game.id].counts.maybe}</span>
+                              <span className="text-red-700">NOT: {attendanceByGame[game.id].counts.not_going}</span>
+                            </div>
+                            <div className="mt-1 text-gray-600">
+                              My status: <span className="font-semibold">{attendanceByGame[game.id].my_status ?? '-'}</span>
+                            </div>
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <div className="text-sm text-gray-500 mb-1">GOING members</div>
+                            <div className="flex flex-wrap gap-2">
+                              {attendanceByGame[game.id].going_members.map(m => (
+                                <div key={m.id} className="text-sm border rounded px-2 py-1 bg-gray-50">
+                                  {m.nickname || m.user.full_name || m.user.email}
+                                </div>
+                              ))}
+                              {attendanceByGame[game.id].going_members.length === 0 && (
+                                <div className="text-sm text-gray-500">None</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

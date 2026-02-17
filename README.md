@@ -44,6 +44,31 @@ Presença (attendance)
 
 Ledger (entradas/saídas) por org
 
+Attendance Consolidada (Phase 2B.1)
+Endpoints (org-scoped):
+
+GET /api/v1/orgs/{org_id}/games/{game_id}/attendance
+
+PUT /api/v1/orgs/{org_id}/games/{game_id}/attendance (body: { status: GOING|MAYBE|NOT_GOING })
+
+Compatibilidade (deprecated):
+
+POST /api/v1/games/{game_id}/attendance
+
+GET /api/v1/{game_id}/attendance
+
+Migration:
+
+d4e5f6a7b8c9_phase_2b1_attendance_consolidada.py
+
+Smoke tests (PowerShell)
+$gameId = "YOUR_GAME_UUID"
+
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/attendance" -Headers $headers
+
+Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/attendance" -Headers $headers `
+  -ContentType "application/json" -Body (@{ status="GOING" } | ConvertTo-Json)
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

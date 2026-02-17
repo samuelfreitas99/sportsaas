@@ -17,9 +17,13 @@
 - [ ] Garantir que nenhum artefato de build entrou no Git (limpar se já entrou)
 
 ### 2B.1 Attendance consolidada
-- [ ] Definir enum AttendanceStatus: GOING | MAYBE | NOT_GOING
-- [ ] Garantir endpoints consistentes por org e por game
-- [ ] Tela do game (ou lista) mostrando contagens e status do usuário
+
+- [x] Definir enum AttendanceStatus: GOING | MAYBE | NOT_GOING
+- [x] Garantir endpoints consistentes por org e por game (org-scoped)
+- [x] Tela do game (ou lista) mostrando contagens e status do usuário
+- [x] Migration segura/idempotente (criar enum/table se não existir; backfill e índices quando já existir)
+- [x] README + smoke tests atualizados
+
 
 ### 2B.2 Convidados
 - [ ] Permitir adicionar convidados por jogo (nome/telefone opcional)

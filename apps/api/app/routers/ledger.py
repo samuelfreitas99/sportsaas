@@ -28,18 +28,19 @@ def create_ledger_entry(
         .filter(OrgMember.user_id == current_user.id, OrgMember.org_id == org_id)
         .first()
     )
-    if membership.role not in [OrgRole.ADMIN, OrgRole.OWNER]:
+    if membership is None or membership.role not in [OrgRole.ADMIN, OrgRole.OWNER]:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     entry = LedgerEntry(
         **entry_in.model_dump(),
         org_id=org_id,
-        created_by=current_user.id,   # <- seu model usa "created_by"
+        created_by_id=current_user.id,  # ✅ NOME CERTO
     )
     db.add(entry)
     db.commit()
     db.refresh(entry)
     return entry
+
 
 @router.get("/orgs/{org_id}/ledger", response_model=list[LedgerEntrySchema])
 def read_ledger(

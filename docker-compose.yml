@@ -30,9 +30,26 @@ services:
       SECRET_KEY: supersecretkey
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:3001"
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    command: npm run dev -- -p 3000
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
+    depends_on:
+      - api
 
 volumes:
   postgres_data:

@@ -1,63 +1,52 @@
 # Sport SaaS
 
-A SaaS web application for sports management.
+A multi-tenant SaaS platform for sports management.
+
+---
 
 ## Stack
 
-- **Backend**: FastAPI (Python 3.11)
-- **Database**: PostgreSQL + SQLAlchemy 2.0 + Alembic
-- **Frontend**: Next.js 14 + TypeScript + Tailwind
-- **Infrastructure**: Docker Compose
+- Backend: FastAPI (Python 3.11)
+- Database: PostgreSQL 15
+- ORM: SQLAlchemy 2.0
+- Migrations: Alembic
+- Frontend: Next.js 14 (App Router) + TypeScript + Tailwind
+- Infrastructure: Docker Compose
 
-## Prerequisites
+---
 
-- Docker & Docker Compose
-- Node.js 18+ (for frontend)
-- Python 3.11+ (for local backend dev if needed)
+## Architecture
 
-## Getting Started
+- Multi-tenant (organization-based isolation)
+- JWT Authentication
+- RBAC (Owner / Admin / Member)
+- Games + Attendance
+- Ledger (Income / Expense per organization)
 
-### 1. Start the Backend and Database
+---
+
+## 🚀 Running the Project (Docker Only)
+
+### 1. Start everything
 
 ```bash
 docker compose up --build
-```
-
-### 2. Run Migrations
-
-Open a new terminal and run:
-
-```bash
-# Enter the api container
+2. Run migrations
 docker compose exec api alembic upgrade head
-```
+URLs
+Frontend: http://localhost:3000
 
-### 3. Start the Frontend
+Backend API: http://localhost:8000
 
-```bash
-cd apps/web
-npm install
-npm run dev
-```
+Swagger Docs: http://localhost:8000/docs
 
-The frontend will be available at http://localhost:3000.
-The backend API is at http://localhost:8000.
-API Documentation (Swagger UI) is at http://localhost:8000/docs.
+Development Rules
+Always use Alembic for DB changes.
 
-## Features
+Never modify models without migration.
 
-- **Multi-tenant**: Organization-based structure.
-- **RBAC**: Owner, Admin, Member roles.
-- **Auth**: JWT Authentication (Login, Register, Refresh).
-- **Games**: Create, list, edit, and delete games.
-- **Attendance**: Mark presence (Going, Maybe, Not Going).
-- **Ledger**: Simple financial system for organizations.
+All protected routes require JWT.
 
-## Project Structure
+All org routes must validate membership.
 
-- `apps/api`: FastAPI backend.
-- `apps/web`: Next.js frontend.
-
-## Example Usage (cURL)
-
-See `apps/api/README.md` for detailed API usage or use the Swagger UI.
+Never break working authentication.

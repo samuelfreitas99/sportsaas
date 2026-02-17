@@ -18,6 +18,14 @@ interface Game {
   location: string
 }
 
+interface LedgerEntry {
+  id: string
+  type: 'INCOME' | 'EXPENSE'
+  amount: number
+  description: string
+  occurred_at: string
+}
+
 interface LedgerSummary {
   total_income: number
   total_expense: number
@@ -28,10 +36,17 @@ export default function Dashboard() {
   const [orgs, setOrgs] = useState<Org[]>([])
   const [selectedOrg, setSelectedOrg] = useState<Org | null>(null)
   const [games, setGames] = useState<Game[]>([])
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([])
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [newOrgName, setNewOrgName] = useState('')
   const [newGame, setNewGame] = useState({ title: '', sport: '', location: '', start_at: '' })
+  const [newLedger, setNewLedger] = useState({
+    type: 'INCOME',
+    amount: 0,
+    description: '',
+    occurred_at: ''
+  })
   const router = useRouter()
 
   useEffect(() => {
@@ -43,8 +58,10 @@ export default function Dashboard() {
     if (selectedOrg) {
       fetchGames(selectedOrg.id)
       fetchSummary(selectedOrg.id)
+      fetchLedger(selectedOrg.id)
     } else {
       setGames([])
+      setLedgerEntries([])
       setSummary(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,27 +103,60 @@ export default function Dashboard() {
     }
   }
 
-  const fetchGames = async (orgId: string) => {
+    const fetchGames = async (orgId: string) => {
     try {
-      const res = await api.get(`/orgs/${orgId}/games`)
-      setGames(res.data)
+        const res = await api.get(`/orgs/${orgId}/games`)
+        setGames(res.data)
     } catch (err) {
-      console.error(err)
-      setGames([])
+        console.error(err)
+        setGames([])
     }
-  }
+    }
 
-  const fetchSummary = async (orgId: string) => {
+    const fetchSummary = async (orgId: string) => {
     try {
-      const res = await api.get(`/orgs/${orgId}/ledger/summary`)
-      setSummary(res.data)
+        const res = await api.get(`/orgs/${orgId}/ledger/summary`)
+        setSummary(res.data)
     } catch (err) {
-      console.error(err)
-      setSummary(null)
+        console.error(err)
+        setSummary(null)
     }
-  }
+    }
+
+    const fetchLedger = async (orgId: string) => {
+    try {
+        const res = await api.get(`/orgs/${orgId}/ledger`)
+        setLedgerEntries((res.data ?? []).slice(0, 20))
+    } catch (err) {
+        console.error(err)
+        setLedgerEntries([])
+    }
+    }
+
 
     const toISO = (v: string) => (v ? new Date(v).toISOString() : v)
+
+    const createLedgerEntry = async () => {
+    if (!selectedOrg) return
+    try {
+        await api.post(`/orgs/${selectedOrg.id}/ledger`, {
+        ...newLedger,
+        occurred_at: toISO(newLedger.occurred_at),
+        })
+        fetchLedger(selectedOrg.id)
+        fetchSummary(selectedOrg.id)
+        setNewLedger({
+        type: 'INCOME',
+        amount: 0,
+        description: '',
+        occurred_at: '',
+        })
+    } catch (err) {
+        console.error(err)
+        alert('Failed to create ledger entry')
+    }
+    }
+
 
     const createGame = async () => {
     if (!selectedOrg) return
@@ -216,6 +266,83 @@ export default function Dashboard() {
                   <p className="text-2xl font-bold text-blue-500">
                     ${summary?.balance ?? 0}
                   </p>
+                </div>
+              </div>
+
+              {/* Ledger */}
+              <div className="bg-white p-6 rounded shadow">
+                <h2 className="text-2xl font-bold mb-4">Ledger</h2>
+                <div className="grid grid-cols-1 gap-2 mb-4">
+                  {ledgerEntries.map(entry => (
+                    <div
+                      key={entry.id}
+                      className="border p-3 rounded flex justify-between items-center text-sm"
+                    >
+                      <div>
+                        <span
+                          className={`font-bold ${
+                            entry.type === 'INCOME' ? 'text-green-600' : 'text-red-600'
+                          }`}
+                        >
+                          {entry.type}
+                        </span>
+                        <span className="mx-2 text-gray-400">|</span>
+                        <span>{entry.description}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">${entry.amount}</div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(entry.occurred_at).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {ledgerEntries.length === 0 && (
+                    <p className="text-gray-500 text-center italic">No entries yet.</p>
+                  )}
+                </div>
+
+                <div className="border-t pt-4">
+                  <h3 className="font-bold mb-2">Add Entry</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      className="border p-2 rounded"
+                      value={newLedger.type}
+                      onChange={e =>
+                        setNewLedger({ ...newLedger, type: e.target.value as 'INCOME' | 'EXPENSE' })
+                      }
+                    >
+                      <option value="INCOME">Income</option>
+                      <option value="EXPENSE">Expense</option>
+                    </select>
+                    <input
+                      type="number"
+                      className="border p-2 rounded"
+                      placeholder="Amount"
+                      value={newLedger.amount}
+                      onChange={e =>
+                        setNewLedger({ ...newLedger, amount: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                    <input
+                      className="border p-2 rounded col-span-2"
+                      placeholder="Description"
+                      value={newLedger.description}
+                      onChange={e => setNewLedger({ ...newLedger, description: e.target.value })}
+                    />
+                    <input
+                      type="datetime-local"
+                      className="border p-2 rounded col-span-2"
+                      value={newLedger.occurred_at}
+                      onChange={e => setNewLedger({ ...newLedger, occurred_at: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    onClick={createLedgerEntry}
+                    className="mt-2 bg-green-600 text-white px-4 py-2 rounded w-full"
+                  >
+                    Add Entry
+                  </button>
                 </div>
               </div>
 

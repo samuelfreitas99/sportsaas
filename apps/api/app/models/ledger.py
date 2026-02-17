@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, func, ForeignKey, Enum, Numeric, Text
+from sqlalchemy import DateTime, ForeignKey, Enum, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,12 +19,21 @@ class LedgerType(str, enum.Enum):
 class LedgerEntry(Base):
     __tablename__ = "ledger_entries"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
 
-    org_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True)
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id"),
+        nullable=False,
+        index=True,
+    )
 
     type: Mapped[LedgerType] = mapped_column(
-        Enum(LedgerType, name="ledger_type"), default=LedgerType.EXPENSE, nullable=False
+        Enum(LedgerType, name="ledger_type"),
+        default=LedgerType.EXPENSE,
+        nullable=False,
     )
 
     amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
@@ -32,18 +41,31 @@ class LedgerEntry(Base):
 
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    # opcional: vincular a um membro da org (pra breakdown mensalista/convidado depois)
     related_member_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=True
+        UUID(as_uuid=True),
+        ForeignKey("org_members.id"),
+        nullable=True,
     )
 
-    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # ✅ nome correto
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+    )
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
 
     organization = relationship("Organization", back_populates="ledger_entries")
     related_member = relationship("OrgMember")
-    creator = relationship("User")
+    creator = relationship("User", foreign_keys=[created_by_id])

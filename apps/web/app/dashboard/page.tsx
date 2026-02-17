@@ -44,6 +44,19 @@ type AttendanceSummary = {
   }>
 }
 
+type OrgGuest = {
+  id: string
+  name: string
+  phone?: string | null
+}
+
+type GameGuest = {
+  id: string
+  name: string
+  phone?: string | null
+  can_delete: boolean
+}
+
 export default function Dashboard() {
   const [orgs, setOrgs] = useState<Org[]>([])
   const [selectedOrg, setSelectedOrg] = useState<Org | null>(null)
@@ -52,6 +65,11 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<LedgerSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [attendanceByGame, setAttendanceByGame] = useState<Record<string, AttendanceSummary>>({})
+  const [orgGuests, setOrgGuests] = useState<OrgGuest[]>([])
+  const [gameGuestsByGame, setGameGuestsByGame] = useState<Record<string, GameGuest[]>>({})
+  const [guestsOpenByGame, setGuestsOpenByGame] = useState<Record<string, boolean>>({})
+  const [guestFormByGame, setGuestFormByGame] = useState<Record<string, { name: string; phone: string; org_guest_id: string }>>({})
+  const [guestsErrorByGame, setGuestsErrorByGame] = useState<Record<string, string | null>>({})
   const [newOrgName, setNewOrgName] = useState('')
   const [newGame, setNewGame] = useState({ title: '', sport: '', location: '', start_at: '' })
   const [newLedger, setNewLedger] = useState({
@@ -73,11 +91,21 @@ export default function Dashboard() {
       fetchSummary(selectedOrg.id)
       fetchLedger(selectedOrg.id)
       setAttendanceByGame({})
+      setOrgGuests([])
+      setGameGuestsByGame({})
+      setGuestsOpenByGame({})
+      setGuestFormByGame({})
+      setGuestsErrorByGame({})
     } else {
       setGames([])
       setLedgerEntries([])
       setSummary(null)
       setAttendanceByGame({})
+      setOrgGuests([])
+      setGameGuestsByGame({})
+      setGuestsOpenByGame({})
+      setGuestFormByGame({})
+      setGuestsErrorByGame({})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrg])
@@ -204,6 +232,70 @@ export default function Dashboard() {
     } catch (err) {
         console.error(err)
         alert('Failed to set attendance')
+    }
+    }
+
+    const fetchOrgGuests = async (orgId: string) => {
+    try {
+        const res = await api.get(`/orgs/${orgId}/guests`)
+        setOrgGuests(res.data)
+    } catch (err) {
+        console.error(err)
+        setOrgGuests([])
+    }
+    }
+
+    const fetchGameGuests = async (orgId: string, gameId: string) => {
+    setGuestsErrorByGame(prev => ({ ...prev, [gameId]: null }))
+    try {
+        const res = await api.get(`/orgs/${orgId}/games/${gameId}/guests`)
+        setGameGuestsByGame(prev => ({ ...prev, [gameId]: res.data }))
+    } catch (err) {
+        console.error(err)
+        setGameGuestsByGame(prev => ({ ...prev, [gameId]: [] }))
+        setGuestsErrorByGame(prev => ({ ...prev, [gameId]: 'Falha ao carregar convidados' }))
+    }
+    }
+
+    const toggleGuests = async (orgId: string, gameId: string) => {
+    const currentlyOpen = !!guestsOpenByGame[gameId]
+    const nextOpen = !currentlyOpen
+    setGuestsOpenByGame(prev => ({ ...prev, [gameId]: nextOpen }))
+    if (nextOpen) {
+        if (orgGuests.length === 0) await fetchOrgGuests(orgId)
+        await fetchGameGuests(orgId, gameId)
+        setGuestFormByGame(prev => ({
+        ...prev,
+        [gameId]: prev[gameId] ?? { name: '', phone: '', org_guest_id: '' },
+        }))
+    }
+    }
+
+    const addGameGuest = async (orgId: string, gameId: string) => {
+    const form = guestFormByGame[gameId] ?? { name: '', phone: '', org_guest_id: '' }
+    setGuestsErrorByGame(prev => ({ ...prev, [gameId]: null }))
+    try {
+        const payload =
+        form.org_guest_id && form.org_guest_id.trim()
+            ? { org_guest_id: form.org_guest_id.trim() }
+            : { name: form.name, phone: form.phone || null }
+        await api.post(`/orgs/${orgId}/games/${gameId}/guests`, payload)
+        setGuestFormByGame(prev => ({ ...prev, [gameId]: { ...form, name: '', phone: '' } }))
+        await fetchGameGuests(orgId, gameId)
+    } catch (err) {
+        console.error(err)
+        setGuestsErrorByGame(prev => ({ ...prev, [gameId]: 'Falha ao adicionar convidado' }))
+    }
+    }
+
+    const removeGameGuest = async (orgId: string, gameId: string, gameGuestId: string) => {
+    setGuestsErrorByGame(prev => ({ ...prev, [gameId]: null }))
+    try {
+        await api.delete(`/orgs/${orgId}/games/${gameId}/guests/${gameGuestId}`)
+        await fetchGameGuests(orgId, gameId)
+    } catch (err) {
+        console.error(err)
+        setGuestsErrorByGame(prev => ({ ...prev, [gameId]: 'Falha ao remover convidado' }))
     }
     }
 
@@ -415,6 +507,12 @@ export default function Dashboard() {
                           >
                             Refresh
                           </button>
+                          <button
+                            onClick={() => selectedOrg && toggleGuests(selectedOrg.id, game.id)}
+                            className="border px-3 py-1 rounded hover:bg-gray-50"
+                          >
+                            Convidados
+                          </button>
                         </div>
                       </div>
 
@@ -445,6 +543,106 @@ export default function Dashboard() {
                               )}
                             </div>
                           </div>
+                        </div>
+                      )}
+
+                      {selectedOrg && guestsOpenByGame[game.id] && (
+                        <div className="mt-4 border-t pt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold">Convidados</h4>
+                            <button
+                              onClick={() => fetchGameGuests(selectedOrg.id, game.id)}
+                              className="text-sm px-3 py-1 border rounded hover:bg-gray-50"
+                            >
+                              Recarregar
+                            </button>
+                          </div>
+
+                          {guestsErrorByGame[game.id] && (
+                            <div className="mb-2 text-sm text-red-600">{guestsErrorByGame[game.id]}</div>
+                          )}
+
+                          <div className="space-y-2 mb-4">
+                            {(gameGuestsByGame[game.id] ?? []).map(g => (
+                              <div key={g.id} className="flex items-center justify-between border rounded p-2">
+                                <div className="min-w-0">
+                                  <div className="font-semibold truncate">{g.name}</div>
+                                  <div className="text-xs text-gray-500 truncate">{g.phone ?? '-'}</div>
+                                </div>
+                                {g.can_delete && (
+                                  <button
+                                    onClick={() => removeGameGuest(selectedOrg.id, game.id, g.id)}
+                                    className="text-sm px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                                  >
+                                    Remover
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {(gameGuestsByGame[game.id] ?? []).length === 0 && (
+                              <div className="text-sm text-gray-500">Nenhum convidado ainda.</div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <select
+                              className="border p-2 rounded"
+                              value={(guestFormByGame[game.id]?.org_guest_id ?? '')}
+                              onChange={e =>
+                                setGuestFormByGame(prev => ({
+                                  ...prev,
+                                  [game.id]: {
+                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                    org_guest_id: e.target.value,
+                                  },
+                                }))
+                              }
+                            >
+                              <option value="">Selecionar do catálogo</option>
+                              {orgGuests.map(og => (
+                                <option key={og.id} value={og.id}>
+                                  {og.name}{og.phone ? ` (${og.phone})` : ''}
+                                </option>
+                              ))}
+                            </select>
+
+                            <input
+                              className="border p-2 rounded"
+                              placeholder="Nome (snapshot)"
+                              value={(guestFormByGame[game.id]?.name ?? '')}
+                              onChange={e =>
+                                setGuestFormByGame(prev => ({
+                                  ...prev,
+                                  [game.id]: {
+                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                    name: e.target.value,
+                                  },
+                                }))
+                              }
+                            />
+
+                            <input
+                              className="border p-2 rounded"
+                              placeholder="Telefone (opcional)"
+                              value={(guestFormByGame[game.id]?.phone ?? '')}
+                              onChange={e =>
+                                setGuestFormByGame(prev => ({
+                                  ...prev,
+                                  [game.id]: {
+                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                    phone: e.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                          </div>
+
+                          <button
+                            onClick={() => addGameGuest(selectedOrg.id, game.id)}
+                            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
+                          >
+                            Adicionar convidado
+                          </button>
                         </div>
                       )}
                     </div>

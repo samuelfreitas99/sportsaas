@@ -69,6 +69,46 @@ Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$g
 Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/attendance" -Headers $headers `
   -ContentType "application/json" -Body (@{ status="GOING" } | ConvertTo-Json)
 
+Convidados (Phase 2B.2)
+Convidado não tem login e não é User/OrgMember. Existe por jogo (game_guests) e opcionalmente vem de um catálogo por org (org_guests). O game_guests sempre guarda snapshot (name/phone) para histórico.
+
+Endpoints:
+
+GET /api/v1/orgs/{org_id}/guests
+
+POST /api/v1/orgs/{org_id}/guests
+
+PATCH /api/v1/orgs/{org_id}/guests/{guest_id} (OWNER/ADMIN)
+
+DELETE /api/v1/orgs/{org_id}/guests/{guest_id} (OWNER/ADMIN; bloqueia se em uso)
+
+GET /api/v1/orgs/{org_id}/games/{game_id}/guests
+
+POST /api/v1/orgs/{org_id}/games/{game_id}/guests (org_guest_id OR name/phone)
+
+DELETE /api/v1/orgs/{org_id}/games/{game_id}/guests/{game_guest_id} (OWNER/ADMIN ou quem criou)
+
+Migration:
+
+e1f2a3b4c5d6_phase_2b2_guests.py
+
+Smoke tests (PowerShell)
+$orgGuest = Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/guests" -Headers $headers `
+  -ContentType "application/json" -Body (@{ name="Visitante 1"; phone="+55 11 99999-0000" } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/guests" -Headers $headers
+
+$gameGuests1 = Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests" -Headers $headers `
+  -ContentType "application/json" -Body (@{ org_guest_id=$orgGuest.id } | ConvertTo-Json)
+
+$gameGuests2 = Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests" -Headers $headers `
+  -ContentType "application/json" -Body (@{ name="Convidado avulso"; phone=$null } | ConvertTo-Json)
+
+$list = Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests" -Headers $headers
+$gameGuestId = $list[0].id
+
+Invoke-RestMethod -Method Delete "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests/$gameGuestId" -Headers $headers
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

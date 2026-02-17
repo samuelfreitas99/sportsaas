@@ -26,9 +26,9 @@
 
 
 ### 2B.2 Convidados
-- [ ] Permitir adicionar convidados por jogo (nome/telefone opcional)
-- [ ] Vincular convidado a um OrgMember (member_type=GUEST) OU tabela separada de guest_attendance
-- [ ] Regras: convidado não tem login; só aparece em presença e cobrança
+- [x] Permitir adicionar convidados por jogo (snapshot name/phone, sem login)
+- [x] Criar catálogo por org (org_guests) + convidados por jogo (game_guests)
+- [x] Regras: convidado não é User/OrgMember; existe por jogo e pode vir do catálogo
 
 ### 2B.3 Cofre / Mensalistas
 - [ ] Definir member_type no OrgMember: MONTHLY vs GUEST

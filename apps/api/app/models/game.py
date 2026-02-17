@@ -48,7 +48,7 @@ class Game(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     organization = relationship("Organization", back_populates="games")
-    game_guests = relationship("GameGuest", foreign_keys="GameGuest.game_id")
+    game_guests = relationship("GameGuest", back_populates="game", cascade="all, delete-orphan", foreign_keys="GameGuest.game_id",)
     created_by_member = relationship("OrgMember", foreign_keys=[created_by_member_id])
     captain_a_member = relationship("OrgMember", foreign_keys=[captain_a_member_id])
     captain_b_member = relationship("OrgMember", foreign_keys=[captain_b_member_id])
@@ -87,6 +87,6 @@ class GameAttendance(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    game = relationship("Game", back_populates="attendances")
+    game = relationship("Game", back_populates="attendances", foreign_keys=[game_id],)
     user = relationship("User")
     org_member = relationship("OrgMember")

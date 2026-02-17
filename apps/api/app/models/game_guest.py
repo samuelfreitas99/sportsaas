@@ -41,7 +41,7 @@ class GameGuest(Base):
     )
 
     organization = relationship("Organization")
-    game = relationship("Game", foreign_keys=[game_id])
+    game = relationship("Game", back_populates="game_guests", foreign_keys=[game_id])
     org_guest = relationship("OrgGuest")
     created_by_member = relationship("OrgMember", foreign_keys=[created_by_member_id])
 

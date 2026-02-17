@@ -12,12 +12,13 @@ Guia operacional para agentes/IA no repositório SportSaaS.
    - não usar Server Actions
    - preferir páginas client-side simples com fetch/axios para /api/v1
 4) Banco (Postgres):
-   - Evitar `Base.metadata.create_all()` como fonte de schema.
-   - Alembic é a fonte da verdade.
+   - `Base.metadata.create_all()` pode existir apenas como fallback de desenvolvimento, mas migrations Alembic são a fonte oficial de schema.
    - Enum em Postgres: cuidado com “type already exists” (usar checkfirst / create_type=False quando aplicável).
 5) Commits:
    - não commitar `.next/`, `__pycache__/`, `.pyc`
    - atualizar `.gitignore` se necessário
+6) Em modelos com múltiplas FKs entre as mesmas tabelas, sempre declarar `foreign_keys` explicitamente nos relationships.
+
 
 ## Convenções
 - API base: /api/v1

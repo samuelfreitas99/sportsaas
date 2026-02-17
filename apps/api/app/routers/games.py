@@ -14,32 +14,13 @@ from app.schemas.game import GameCreate, Game as GameSchema, AttendanceCreate, A
 from app.routers.deps import get_current_user
 from app.models.user import User
 
-# IMPORTA O HELPER QUE VOCÊ CRIOU
-from app.routers.deps import require_org_member
+from app.routers.deps import require_org_admin, require_org_member
 from app.schemas.attendance import AttendanceSetRequest, GameAttendanceSummary
 from app.schemas.game_detail import GameDetailResponse
 from app.schemas.draft import DraftPickRequest, DraftStateResponse, DraftSummary
 from app.schemas.teams import CaptainsResolved, CaptainsSetRequest, TeamsResponse, TeamAssignmentSetRequest
 
 router = APIRouter()
-
-
-def _get_membership(db: Session, org_id: UUID, user_id: UUID) -> OrgMember | None:
-    return (
-        db.query(OrgMember)
-        .filter(OrgMember.org_id == org_id, OrgMember.user_id == user_id)
-        .first()
-    )
-
-
-def _require_admin_membership(db: Session, org_id: UUID, user_id: UUID) -> OrgMember:
-    membership = _get_membership(db=db, org_id=org_id, user_id=user_id)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-    if membership.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return membership
-
 
 def _resolve_member_payload(m: OrgMember) -> dict:
     included = m.member_type == MemberType.MONTHLY
@@ -88,17 +69,7 @@ def create_game(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # garante que é membro (e org existe)
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-
-    # regra: só ADMIN/OWNER pode criar
-    membership = (
-        db.query(OrgMember)
-        .filter(OrgMember.user_id == current_user.id, OrgMember.org_id == org_id)
-        .first()
-    )
-    if membership.role not in [OrgRole.ADMIN, OrgRole.OWNER]:
-        raise HTTPException(status_code=403, detail="Not authorized to create games")
+    membership = require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = Game(**game_in.model_dump(), org_id=org_id, created_by_member_id=membership.id)
     db.add(game)
@@ -357,8 +328,7 @@ def set_game_captains(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin_membership(db=db, org_id=org_id, user_id=current_user.id)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = (
         db.query(Game)
@@ -607,8 +577,7 @@ def start_draft(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin_membership(db=db, org_id=org_id, user_id=current_user.id)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
@@ -641,8 +610,7 @@ def draft_pick(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin_membership(db=db, org_id=org_id, user_id=current_user.id)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
@@ -769,8 +737,7 @@ def finish_draft(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin_membership(db=db, org_id=org_id, user_id=current_user.id)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     draft = db.query(GameDraft).filter(GameDraft.org_id == org_id, GameDraft.game_id == game_id).first()
     if not draft:
@@ -879,8 +846,7 @@ def set_game_team_assignment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin_membership(db=db, org_id=org_id, user_id=current_user.id)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
@@ -958,19 +924,11 @@ def get_game_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-
-    membership = (
-        db.query(OrgMember)
-        .filter(OrgMember.org_id == org_id, OrgMember.user_id == current_user.id)
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member")
 
     counts_rows = (
         db.query(GameAttendance.status, func.count(GameAttendance.id))
@@ -1042,19 +1000,11 @@ def put_game_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-
-    membership = (
-        db.query(OrgMember)
-        .filter(OrgMember.org_id == org_id, OrgMember.user_id == current_user.id)
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member")
 
     row = (
         db.query(GameAttendance)
@@ -1088,15 +1038,7 @@ def mark_attendance(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    # garante que é membro da org do jogo
-    require_org_member(org_id=game.org_id, db=db, current_user=current_user)
-    membership = (
-        db.query(OrgMember)
-        .filter(OrgMember.org_id == game.org_id, OrgMember.user_id == current_user.id)
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member")
+    membership = require_org_member(org_id=game.org_id, db=db, current_user=current_user)
 
     attendance = (
         db.query(GameAttendance)
@@ -1130,11 +1072,7 @@ def list_attendance(
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    membership = db.query(OrgMember).filter(
-        OrgMember.user_id == current_user.id, OrgMember.org_id == game.org_id
-    ).first()
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member")
+    require_org_member(org_id=game.org_id, db=db, current_user=current_user)
 
     rows = db.query(GameAttendance).filter(GameAttendance.game_id == game_id).all()
     return rows

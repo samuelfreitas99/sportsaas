@@ -14,25 +14,23 @@
 
 ## ✅ 2B.0 Hardening de Repositório
 
-* [x] `.gitignore` configurado para impedir commit de:
+* [x] `.gitignore` configurado
 
   * [x] `.next/`
   * [x] `__pycache__/`
   * [x] `*.pyc`
   * [x] `node_modules/`
-* [x] Garantir que nenhum artefato de build está versionado
+* [x] Nenhum artefato de build versionado
 
 ---
 
 ## ✅ 2B.1 Attendance Consolidada (org-scoped)
 
-* [x] Enum `AttendanceStatus`: `GOING | MAYBE | NOT_GOING`
-* [x] Endpoint org-scoped:
-
-  * [x] `/orgs/{org_id}/games/{game_id}/attendance`
-* [x] Migration idempotente segura
-* [x] Tela exibindo contagens + status do usuário
-* [x] README + smoke tests atualizados
+* [x] Enum `AttendanceStatus`
+* [x] Endpoint org-scoped `/orgs/{org_id}/games/{game_id}/attendance`
+* [x] Migration idempotente
+* [x] Tela com contagens + status do usuário
+* [x] README + smoke tests
 
 ---
 
@@ -40,222 +38,191 @@
 
 ### Modelagem
 
-* [x] `org_guests` (catálogo por organização)
-* [x] `game_guests` (snapshot por jogo)
-* [x] Convidado não é `User` nem `OrgMember`
-* [x] Snapshot pode vir do catálogo
+* [x] `org_guests`
+* [x] `game_guests`
+* [x] Snapshot por jogo
+* [x] Convidado não é User/OrgMember
 
 ### Backend
 
 * [x] Endpoints org-scoped
-* [x] Flag `billable=true` para convidados sem login
+* [x] `billable=true` para game_guest
 
 ### Frontend
 
-* [x] UI mínima no `/dashboard`
+* [x] UI mínima no dashboard
 
 ---
 
-## ✅ 2B.3 Mensalistas vs Convidados Fixos (member_type)
+## ✅ 2B.3 Mensalistas vs Convidados Fixos
 
 ### Modelagem
 
-* [x] `OrgMember.member_type: MONTHLY | GUEST`
+* [x] `member_type`
 * [x] `is_active`
 * [x] `nickname`
-* [x] Migration segura com defaults + índices
+* [x] Migration com defaults + índices
 
 ### Backend
 
-* [x] PATCH org-scoped com permissões refinadas
-* [x] Attendance retorna:
-
-  * [x] `member_type`
-  * [x] `included`
-  * [x] `billable`
+* [x] PATCH com permissões refinadas
+* [x] Attendance retorna `member_type`, `included`, `billable`
 
 ### Frontend
 
-* [x] UI para editar tipo do membro em `/dashboard/members`
-* [x] Badges MONTHLY/GUEST na presença
+* [x] UI edição membro
+* [x] Badges na presença
 
-### ⚠️ Pendente (entra na Fase 2C — Billing)
+⚠️ **Pendência (2C — Billing)**
 
-* [ ] Geração automática de charges:
-
-  * [ ] Mensalista → cobrança por ciclo
-  * [ ] Convidado fixo → cobrança por presença
+* [ ] Cobrança por ciclo (MONTHLY)
+* [ ] Cobrança por presença (GUEST)
 
 ---
 
-## ✅ 2B.7 Perfil do Membro (User + OrgMember)
+## ✅ 2B.7 Perfil do Membro
 
 ### User
 
 * [x] `full_name`
 * [x] `avatar_url`
 * [x] `phone`
-* [x] Página `/dashboard/profile`
-* [x] Editar dados pessoais
+* [x] `/dashboard/profile`
+* [x] Edição de dados
 
 ### OrgMember
 
-* [x] `nickname` integrado à UI
+* [x] `nickname` integrado
 
 ---
 
-# 🔜 Próximas Fases Sociais
+## ✅ 2B.8 Página Detalhe do Jogo
+
+* [x] Página `/dashboard/games/[id]`
+* [x] Endpoint detalhado do jogo
+* [x] Presença completa
+* [x] Convidados
+* [x] Ações rápidas
 
 ---
 
-## 🟡 2B.8 Página Detalhe do Jogo (Game Details)
-
-* [x] Criar página `/dashboard/games/[id]`
-* [x] Endpoint detalhado:
-
-  * [x] `/orgs/{org_id}/games/{game_id}`
-* [x] Exibir:
-
-  * [x] Data / horário
-  * [x] Lista de presença
-  * [x] Contagens
-  * [x] Convidados do jogo
-* [x] Botões rápidos:
-
-  * [x] Marcar presença
-  * [x] Adicionar convidado
-  * [ ] Definir capitães (futuro)
-  * [ ] Iniciar draft (futuro)
-
----
-
-## 🟡 2B.9 Capitães e Times
+## ✅ 2B.9 Capitães e Times (MVP A/B)
 
 ### Backend
 
-* [x] Campo no Game:
-
-  * [x] `captain_a_member_id` / `captain_a_guest_id`
-  * [x] `captain_b_member_id` / `captain_b_guest_id`
-* [x] Seleção:
-
-  * [x] Manual
-  * [x] Sorteio automático
-* [x] Regra anti-repetição de capitão
+* [x] Capitães manual
+* [x] Capitães sorteio
+* [x] Anti-repetição
+* [x] Persistência de times
 
 ### Frontend
 
-* [x] UI para montar Times A/B
+* [x] UI Times A/B
+
+📌 Nota: MVP suporta 2 times (A/B). Roadmap: suportar N times (3+).
 
 ---
 
-## 🟡 2B.10 Draft v1 (sem realtime)
+## ✅ 2B.10 Draft v1 (sem realtime)
 
 ### Backend
 
-* [x] Modelo `draft_state` persistido
-* [x] Ordem A-B-B-A (ou configurável)
+* [x] Model Draft persistido
+* [x] Ordem ABBA
 * [x] Registrar picks
 * [x] Impedir duplicidade
+* [x] Atualizar times automaticamente
 
 ### Frontend
 
-* [x] UI simples de seleção
-* [x] Encerrar draft e salvar times
+* [x] UI draft
+* [x] Controle de turno
+* [x] Finalizar draft
 
 ---
 
-## 🟡 2B.11 RBAC e Permissões Refinadas
+## 🟡 2B.11 RBAC Refinado
 
-### OWNER / ADMIN podem:
+OWNER / ADMIN:
 
-* [ ] Editar jogo
-* [ ] Definir capitães
-* [ ] Iniciar draft
-* [ ] Gerenciar convidados
+* [x] Editar jogo
+* [x] Definir capitães
+* [x] Iniciar draft
+* [x] Gerenciar convidados
 
-### MEMBER pode:
+MEMBER:
 
-* [ ] Marcar presença
+* [x] Marcar presença
+* [x] Ver draft
 
-* [ ] Ver draft
+Geral:
 
-* [ ] Validar todas rotas sensíveis
+* [x] Validar todas rotas sensíveis
 
 ---
 
-## 🟡 2B.12 Smoke Tests por Fase
+## 🟡 2B.12 Smoke Tests Consolidados
 
-* [ ] Bloco no README com:
+Objetivo: validar sistema completo após cada fase.
 
-  * [ ] Attendance test
-  * [ ] Guest test
-  * [ ] Draft test
-  * [ ] Captain selection test
-* [ ] Validar build limpo:
+* [ ] Login test
+* [ ] Attendance test
+* [ ] Guest test
+* [ ] Draft test
+* [ ] Captain test
+* [ ] docker compose up -d --build
+* [ ] alembic upgrade head
+* [ ] npm run build
 
-  * [ ] `docker compose up -d --build`
-  * [ ] `alembic upgrade head`
-  * [ ] `npm run build`
 
 ---
 
 # 💰 Fase 2C — Cofre / Billing Inteligente
 
-(Entrará após Capitães/Draft)
-
-* [ ] Cobrança por ciclo para `MONTHLY`
-* [ ] Cobrança por presença para `GUEST`
-* [ ] Integração com ledger
-* [ ] Geração automática de charges
-* [ ] Dashboard financeiro por organização
+* [ ] Cobrança ciclo MONTHLY
+* [ ] Cobrança por presença GUEST
+* [ ] Integração ledger
+* [ ] Geração automática charges
+* [ ] Dashboard financeiro por org
 
 ---
 
-# 🏟 Fase 3 — Marketplace (Centros Esportivos)
+# 🏟 Fase 3 — Marketplace
 
----
+## 3.0 Modelo
 
-## 3.0 Modelo e Visibilidade
+* [ ] OrgType: GROUP | CENTER
+* [ ] Visibilidade
 
-* [ ] `OrgType: GROUP | CENTER`
-* [ ] `Visibilidade: PRIVATE | MARKETPLACE | HYBRID`
-
----
-
-## 3.1 Estrutura do Centro
+## 3.1 Centro
 
 * [ ] Units
 * [ ] Courts
 * [ ] Photos
 * [ ] Policies
 
----
+## 3.2 Reservas
 
-## 3.2 Disponibilidade e Reservas
-
-* [ ] Templates de horários
+* [ ] Templates
 * [ ] Bloqueios
-* [ ] Reservas `PENDING | CONFIRMED | CANCELLED`
-* [ ] Integração financeira
+* [ ] Reservas
+* [ ] Financeiro
+
+## 3.3 Busca Pública
+
+* [ ] Filtros
+* [ ] Página centro
+* [ ] Página quadra
 
 ---
 
-## 3.3 Busca Pública estilo Airbnb
+# 📝 Notas
 
-* [ ] Página pública com filtros
-* [ ] Página do centro
-* [ ] Página da quadra + agenda
-
----
-
-# 📝 Notas / Decisões
-
-* `member_type` influencia cobrança futura
-* `game_guest` sempre `billable=true`
+* member_type influencia cobrança futura
+* game_guest sempre billable
 * Attendance é org-scoped
-* Convidado não vira automaticamente membro
+* Convidado não vira membro
+* MVP usa Times A/B; futuro: N teams
+* Relacionamentos Game ↔ GameGuest devem sempre declarar `foreign_keys` explicitamente para evitar ambiguidade de mapper no SQLAlchemy.
 
 ---
-
-

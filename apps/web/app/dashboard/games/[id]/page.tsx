@@ -277,6 +277,10 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
 
   const addGuest = async () => {
     if (!orgId) return
+    if (!isAdmin) {
+      setError('Apenas OWNER/ADMIN pode gerenciar convidados')
+      return
+    }
     setError(null)
     try {
       const payload =
@@ -548,6 +552,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
 
               <div className="border-t pt-4">
                 <div className="font-bold mb-2">Adicionar convidado</div>
+                {!isAdmin && <div className="text-xs text-gray-500 mb-2">Apenas OWNER/ADMIN pode adicionar convidados.</div>}
 
                 <div className="flex gap-2 mb-2">
                   <button
@@ -555,6 +560,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
                     className={`text-sm px-3 py-1 rounded border ${
                       guestMode === 'SNAPSHOT' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'hover:bg-gray-50'
                     }`}
+                    disabled={!isAdmin}
                   >
                     Snapshot
                   </button>
@@ -563,6 +569,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
                     className={`text-sm px-3 py-1 rounded border ${
                       guestMode === 'CATALOG' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'hover:bg-gray-50'
                     }`}
+                    disabled={!isAdmin}
                   >
                     Catálogo
                   </button>
@@ -573,6 +580,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
                     className="w-full border p-2 rounded mb-2"
                     value={guestOrgGuestId}
                     onChange={e => setGuestOrgGuestId(e.target.value)}
+                    disabled={!isAdmin}
                   >
                     <option value="">Selecionar do catálogo</option>
                     {orgGuests.map(og => (
@@ -588,17 +596,23 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
                       placeholder="Nome"
                       value={guestName}
                       onChange={e => setGuestName(e.target.value)}
+                      disabled={!isAdmin}
                     />
                     <input
                       className="border p-2 rounded"
                       placeholder="Telefone (opcional)"
                       value={guestPhone}
                       onChange={e => setGuestPhone(e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
                 )}
 
-                <button onClick={addGuest} className="w-full bg-blue-600 text-white px-4 py-2 rounded">
+                <button
+                  onClick={addGuest}
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                  disabled={!isAdmin}
+                >
                   Adicionar
                 </button>
               </div>

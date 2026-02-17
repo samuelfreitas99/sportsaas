@@ -213,6 +213,35 @@ Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$
 # finalizar
 Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/finish" -Headers $headers
 
+RBAC quick tests (Phase 2B.11)
+Pré-requisito: ter um usuário MEMBER e um usuário ADMIN/OWNER na mesma org.
+
+Smoke tests (PowerShell)
+# login MEMBER
+$loginMember = Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/auth/login" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body "username=MEMBER_EMAIL&password=MEMBER_PASSWORD"
+$headersMember = @{ Authorization = "Bearer $($loginMember.access_token)" }
+
+# MEMBER tenta start draft -> 403
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/start" -Headers $headersMember
+
+# MEMBER tenta add guest -> 403
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests" -Headers $headersMember `
+  -ContentType "application/json" -Body (@{ name="Visitante"; phone=$null } | ConvertTo-Json)
+
+# MEMBER consegue GET game details -> 200
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId" -Headers $headersMember
+
+# login ADMIN/OWNER
+$loginAdmin = Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/auth/login" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body "username=ADMIN_EMAIL&password=ADMIN_PASSWORD"
+$headersAdmin = @{ Authorization = "Bearer $($loginAdmin.access_token)" }
+
+# ADMIN consegue start draft -> 200
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/start" -Headers $headersAdmin
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

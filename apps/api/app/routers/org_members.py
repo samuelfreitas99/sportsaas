@@ -65,17 +65,13 @@ def add_member(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-
-    my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not my_membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    my_membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     if my_membership.role == OrgRole.MEMBER:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="insufficient role")
 
     if my_membership.role == OrgRole.ADMIN and payload.role != OrgRole.MEMBER:
-        raise HTTPException(status_code=403, detail="Not authorized to assign this role")
+        raise HTTPException(status_code=403, detail="insufficient role")
 
     user = db.query(User).filter(User.email == payload.email).first()
     if not user:
@@ -107,11 +103,7 @@ def update_member_role(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-
-    my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not my_membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    my_membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     if my_membership.id == member_id:
         raise HTTPException(status_code=400, detail="Cannot change your own role")
@@ -126,10 +118,10 @@ def update_member_role(
         raise HTTPException(status_code=404, detail="Member not found")
 
     if not _can_manage(my_membership.role, target.role):
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="insufficient role")
 
     if my_membership.role == OrgRole.ADMIN and payload.role == OrgRole.OWNER:
-        raise HTTPException(status_code=403, detail="Not authorized to assign this role")
+        raise HTTPException(status_code=403, detail="insufficient role")
 
     if target.role == OrgRole.OWNER and payload.role != OrgRole.OWNER:
         if _count_owners(db=db, org_id=org_id) <= 1:
@@ -149,11 +141,7 @@ def update_member(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-
-    my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not my_membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    my_membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     target = (
         db.query(OrgMember)
@@ -174,11 +162,11 @@ def update_member(
 
     if wants_member_type or wants_is_active:
         if not is_admin:
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="insufficient role")
 
     if wants_nickname:
         if not (is_admin or is_self):
-            raise HTTPException(status_code=403, detail="Not authorized")
+            raise HTTPException(status_code=403, detail="insufficient role")
         target.nickname = data["nickname"]
     if wants_member_type:
         target.member_type = data["member_type"]
@@ -197,11 +185,7 @@ def remove_member(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-
-    my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not my_membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    my_membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     target = (
         db.query(OrgMember)
@@ -215,7 +199,7 @@ def remove_member(
         raise HTTPException(status_code=400, detail="Cannot remove yourself")
 
     if not _can_manage(my_membership.role, target.role):
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="insufficient role")
 
     if target.role == OrgRole.OWNER and _count_owners(db=db, org_id=org_id) <= 1:
         raise HTTPException(status_code=400, detail="Cannot remove last OWNER")

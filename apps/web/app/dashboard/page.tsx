@@ -34,6 +34,7 @@ interface LedgerSummary {
 
 type AttendanceStatus = 'GOING' | 'MAYBE' | 'NOT_GOING'
 type MemberType = 'MONTHLY' | 'GUEST'
+type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER'
 
 type AttendanceSummary = {
   counts: { going: number; maybe: number; not_going: number }
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const [guestsOpenByGame, setGuestsOpenByGame] = useState<Record<string, boolean>>({})
   const [guestFormByGame, setGuestFormByGame] = useState<Record<string, { name: string; phone: string; org_guest_id: string }>>({})
   const [guestsErrorByGame, setGuestsErrorByGame] = useState<Record<string, string | null>>({})
+  const [isAdmin, setIsAdmin] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
   const [newGame, setNewGame] = useState({ title: '', sport: '', location: '', start_at: '' })
   const [newLedger, setNewLedger] = useState({
@@ -99,6 +101,7 @@ export default function Dashboard() {
       fetchGames(selectedOrg.id)
       fetchSummary(selectedOrg.id)
       fetchLedger(selectedOrg.id)
+      fetchMyRole(selectedOrg.id)
       setAttendanceByGame({})
       setOrgGuests([])
       setGameGuestsByGame({})
@@ -115,9 +118,28 @@ export default function Dashboard() {
       setGuestsOpenByGame({})
       setGuestFormByGame({})
       setGuestsErrorByGame({})
+      setIsAdmin(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOrg])
+
+  const fetchMyRole = async (orgId: string) => {
+    try {
+      const meRes = await api.get('/users/me')
+      const myId = meRes.data?.id ?? null
+      if (!myId) {
+        setIsAdmin(false)
+        return
+      }
+      const membersRes = await api.get(`/orgs/${orgId}/members`)
+      const list = (membersRes.data ?? []) as Array<{ user_id: string; role: OrgRole }>
+      const mine = list.find(m => m.user_id === myId) ?? null
+      setIsAdmin(mine?.role === 'OWNER' || mine?.role === 'ADMIN')
+    } catch (err) {
+      console.error(err)
+      setIsAdmin(false)
+    }
+  }
 
   const fetchOrgs = async () => {
     try {
@@ -212,6 +234,10 @@ export default function Dashboard() {
 
     const createGame = async () => {
     if (!selectedOrg) return
+    if (!isAdmin) {
+        alert('Apenas OWNER/ADMIN pode criar jogos')
+        return
+    }
     try {
         await api.post(`/orgs/${selectedOrg.id}/games`, {
         ...newGame,
@@ -281,6 +307,10 @@ export default function Dashboard() {
     }
 
     const addGameGuest = async (orgId: string, gameId: string) => {
+    if (!isAdmin) {
+        setGuestsErrorByGame(prev => ({ ...prev, [gameId]: 'Apenas OWNER/ADMIN pode gerenciar convidados' }))
+        return
+    }
     const form = guestFormByGame[gameId] ?? { name: '', phone: '', org_guest_id: '' }
     setGuestsErrorByGame(prev => ({ ...prev, [gameId]: null }))
     try {
@@ -298,6 +328,10 @@ export default function Dashboard() {
     }
 
     const removeGameGuest = async (orgId: string, gameId: string, gameGuestId: string) => {
+    if (!isAdmin) {
+        setGuestsErrorByGame(prev => ({ ...prev, [gameId]: 'Apenas OWNER/ADMIN pode gerenciar convidados' }))
+        return
+    }
     setGuestsErrorByGame(prev => ({ ...prev, [gameId]: null }))
     try {
         await api.delete(`/orgs/${orgId}/games/${gameId}/guests/${gameGuestId}`)
@@ -627,7 +661,7 @@ export default function Dashboard() {
                                   </div>
                                   <div className="text-xs text-gray-500 truncate">{g.phone ?? '-'}</div>
                                 </div>
-                                {g.can_delete && (
+                                {isAdmin && (
                                   <button
                                     onClick={() => removeGameGuest(selectedOrg.id, game.id, g.id)}
                                     className="text-sm px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
@@ -642,65 +676,71 @@ export default function Dashboard() {
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                            <select
-                              className="border p-2 rounded"
-                              value={(guestFormByGame[game.id]?.org_guest_id ?? '')}
-                              onChange={e =>
-                                setGuestFormByGame(prev => ({
-                                  ...prev,
-                                  [game.id]: {
-                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
-                                    org_guest_id: e.target.value,
-                                  },
-                                }))
-                              }
-                            >
-                              <option value="">Selecionar do catálogo</option>
-                              {orgGuests.map(og => (
-                                <option key={og.id} value={og.id}>
-                                  {og.name}{og.phone ? ` (${og.phone})` : ''}
-                                </option>
-                              ))}
-                            </select>
+                          {isAdmin ? (
+                            <>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <select
+                                  className="border p-2 rounded"
+                                  value={(guestFormByGame[game.id]?.org_guest_id ?? '')}
+                                  onChange={e =>
+                                    setGuestFormByGame(prev => ({
+                                      ...prev,
+                                      [game.id]: {
+                                        ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                        org_guest_id: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                >
+                                  <option value="">Selecionar do catálogo</option>
+                                  {orgGuests.map(og => (
+                                    <option key={og.id} value={og.id}>
+                                      {og.name}{og.phone ? ` (${og.phone})` : ''}
+                                    </option>
+                                  ))}
+                                </select>
 
-                            <input
-                              className="border p-2 rounded"
-                              placeholder="Nome (snapshot)"
-                              value={(guestFormByGame[game.id]?.name ?? '')}
-                              onChange={e =>
-                                setGuestFormByGame(prev => ({
-                                  ...prev,
-                                  [game.id]: {
-                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
-                                    name: e.target.value,
-                                  },
-                                }))
-                              }
-                            />
+                                <input
+                                  className="border p-2 rounded"
+                                  placeholder="Nome (snapshot)"
+                                  value={(guestFormByGame[game.id]?.name ?? '')}
+                                  onChange={e =>
+                                    setGuestFormByGame(prev => ({
+                                      ...prev,
+                                      [game.id]: {
+                                        ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                        name: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
 
-                            <input
-                              className="border p-2 rounded"
-                              placeholder="Telefone (opcional)"
-                              value={(guestFormByGame[game.id]?.phone ?? '')}
-                              onChange={e =>
-                                setGuestFormByGame(prev => ({
-                                  ...prev,
-                                  [game.id]: {
-                                    ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
-                                    phone: e.target.value,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
+                                <input
+                                  className="border p-2 rounded"
+                                  placeholder="Telefone (opcional)"
+                                  value={(guestFormByGame[game.id]?.phone ?? '')}
+                                  onChange={e =>
+                                    setGuestFormByGame(prev => ({
+                                      ...prev,
+                                      [game.id]: {
+                                        ...(prev[game.id] ?? { name: '', phone: '', org_guest_id: '' }),
+                                        phone: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                />
+                              </div>
 
-                          <button
-                            onClick={() => addGameGuest(selectedOrg.id, game.id)}
-                            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
-                          >
-                            Adicionar convidado
-                          </button>
+                              <button
+                                onClick={() => addGameGuest(selectedOrg.id, game.id)}
+                                className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
+                              >
+                                Adicionar convidado
+                              </button>
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-500">Apenas OWNER/ADMIN pode adicionar/remover convidados.</div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -709,35 +749,41 @@ export default function Dashboard() {
 
                 <div className="border-t pt-4">
                   <h3 className="font-bold mb-2">Create Game</h3>
+                  {!isAdmin && <div className="text-sm text-gray-500 mb-2">Apenas OWNER/ADMIN pode criar jogos.</div>}
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       className="border p-2 rounded"
                       placeholder="Title"
                       value={newGame.title}
                       onChange={e => setNewGame({ ...newGame, title: e.target.value })}
+                      disabled={!isAdmin}
                     />
                     <input
                       className="border p-2 rounded"
                       placeholder="Sport"
                       value={newGame.sport}
                       onChange={e => setNewGame({ ...newGame, sport: e.target.value })}
+                      disabled={!isAdmin}
                     />
                     <input
                       className="border p-2 rounded"
                       placeholder="Location"
                       value={newGame.location}
                       onChange={e => setNewGame({ ...newGame, location: e.target.value })}
+                      disabled={!isAdmin}
                     />
                     <input
                       className="border p-2 rounded"
                       type="datetime-local"
                       value={newGame.start_at}
                       onChange={e => setNewGame({ ...newGame, start_at: e.target.value })}
+                      disabled={!isAdmin}
                     />
                   </div>
                   <button
                     onClick={createGame}
-                    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
+                    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
+                    disabled={!isAdmin}
                   >
                     Add Game
                   </button>

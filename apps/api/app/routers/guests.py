@@ -10,9 +10,9 @@ from app.db.session import get_db
 from app.models.game import Game
 from app.models.game_guest import GameGuest
 from app.models.org_guest import OrgGuest
-from app.models.org_member import OrgMember, OrgRole
+from app.models.org_member import OrgRole
 from app.models.user import User
-from app.routers.deps import get_current_user, require_org_member
+from app.routers.deps import get_current_user, require_org_admin, require_org_member
 from app.schemas.guest import (
     GameGuestCreate,
     GameGuestResponse,
@@ -22,24 +22,6 @@ from app.schemas.guest import (
 )
 
 router = APIRouter()
-
-
-def _get_membership(db: Session, org_id: UUID, user_id: UUID) -> OrgMember | None:
-    return (
-        db.query(OrgMember)
-        .filter(OrgMember.org_id == org_id, OrgMember.user_id == user_id)
-        .first()
-    )
-
-
-def _require_admin(db: Session, org_id: UUID, current_user: User) -> OrgMember:
-    membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-    if membership.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return membership
-
 
 def _norm(s: str | None) -> str | None:
     if s is None:
@@ -65,7 +47,7 @@ def create_org_guest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     name = _norm(payload.name)
     if not name:
@@ -96,8 +78,7 @@ def update_org_guest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin(db=db, org_id=org_id, current_user=current_user)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     guest = db.query(OrgGuest).filter(OrgGuest.org_id == org_id, OrgGuest.id == guest_id).first()
     if not guest:
@@ -133,8 +114,7 @@ def delete_org_guest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
-    _require_admin(db=db, org_id=org_id, current_user=current_user)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     guest = db.query(OrgGuest).filter(OrgGuest.org_id == org_id, OrgGuest.id == guest_id).first()
     if not guest:
@@ -156,15 +136,11 @@ def list_game_guests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-
-    membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
 
     rows = (
         db.query(GameGuest)
@@ -185,7 +161,7 @@ def list_game_guests(
                 name=r.name,
                 phone=r.phone,
                 created_by_member_id=r.created_by_member_id,
-                can_delete=is_admin or (r.created_by_member_id == membership.id),
+                can_delete=is_admin,
                 source="GAME_GUEST",
                 billable=True,
                 created_at=r.created_at,
@@ -203,15 +179,11 @@ def create_game_guest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    membership = require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-
-    membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
 
     if payload.org_guest_id:
         org_guest = (
@@ -255,7 +227,6 @@ def create_game_guest(
     db.commit()
     db.refresh(row)
 
-    is_admin = membership.role in (OrgRole.OWNER, OrgRole.ADMIN)
     return GameGuestResponse(
         id=row.id,
         org_id=row.org_id,
@@ -264,7 +235,7 @@ def create_game_guest(
         name=row.name,
         phone=row.phone,
         created_by_member_id=row.created_by_member_id,
-        can_delete=is_admin or (row.created_by_member_id == membership.id),
+        can_delete=True,
         source="GAME_GUEST",
         billable=True,
         created_at=row.created_at,
@@ -280,15 +251,11 @@ def delete_game_guest(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_org_member(org_id=org_id, db=db, current_user=current_user)
+    require_org_admin(org_id=org_id, db=db, current_user=current_user)
 
     game = db.query(Game).filter(Game.id == game_id, Game.org_id == org_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found")
-
-    membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
 
     row = (
         db.query(GameGuest)
@@ -297,10 +264,6 @@ def delete_game_guest(
     )
     if not row:
         raise HTTPException(status_code=404, detail="Game guest not found")
-
-    is_admin = membership.role in (OrgRole.OWNER, OrgRole.ADMIN)
-    if not (is_admin or row.created_by_member_id == membership.id):
-        raise HTTPException(status_code=403, detail="Not authorized")
 
     db.delete(row)
     db.commit()

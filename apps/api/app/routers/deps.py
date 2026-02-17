@@ -13,8 +13,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import TokenData
 
-from app.models.organization import Organization
-from app.models.org_member import OrgMember
+from app.models.org_member import OrgMember, OrgRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
@@ -48,11 +47,7 @@ def require_org_member(
     org_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Organization:
-    org = db.query(Organization).filter(Organization.id == org_id).first()
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
+) -> OrgMember:
     membership = (
         db.query(OrgMember)
         .filter(OrgMember.org_id == org_id, OrgMember.user_id == current_user.id)
@@ -61,7 +56,29 @@ def require_org_member(
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a member of this organization",
+            detail="not a member of this org",
         )
 
-    return org
+    return membership
+
+
+def require_org_admin(
+    org_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> OrgMember:
+    membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
+    if membership.role not in (OrgRole.OWNER, OrgRole.ADMIN):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="insufficient role")
+    return membership
+
+
+def require_org_owner(
+    org_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> OrgMember:
+    membership = require_org_member(org_id=org_id, db=db, current_user=current_user)
+    if membership.role != OrgRole.OWNER:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="insufficient role")
+    return membership

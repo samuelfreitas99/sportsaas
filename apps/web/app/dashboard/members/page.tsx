@@ -4,12 +4,16 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '@/lib/api'
 
 type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER'
+type MemberType = 'MONTHLY' | 'GUEST'
 
 type Member = {
   id: string
   user_id: string
   org_id: string
   role: OrgRole
+  member_type: MemberType
+  nickname?: string | null
+  is_active: boolean
   created_at: string
   updated_at: string
   user: {
@@ -88,6 +92,18 @@ export default function MembersPage() {
     }
   }
 
+  const changeMemberType = async (memberId: string, member_type: MemberType) => {
+    if (!orgId) return
+    setError(null)
+    try {
+      await api.patch(`/orgs/${orgId}/members/${memberId}`, { member_type })
+      await refresh(orgId)
+    } catch (e) {
+      console.error(e)
+      setError('Falha ao alterar member_type')
+    }
+  }
+
   const removeMember = async (memberId: string) => {
     if (!orgId) return
     setError(null)
@@ -139,12 +155,36 @@ export default function MembersPage() {
                   <div key={m.id} className="border rounded p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold truncate">
-                        {m.user.full_name || m.user.email}
+                        {m.nickname || m.user.full_name || m.user.email}
                       </div>
                       <div className="text-sm text-gray-500 truncate">{m.user.email}</div>
+                      <div className="mt-1 flex gap-2">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded border ${
+                            m.member_type === 'MONTHLY'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                          }`}
+                        >
+                          {m.member_type}
+                        </span>
+                        {!m.is_active && (
+                          <span className="text-xs px-2 py-0.5 rounded border bg-gray-100 text-gray-700 border-gray-200">
+                            INACTIVE
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <select
+                        className="border p-2 rounded text-sm"
+                        value={m.member_type}
+                        onChange={e => changeMemberType(m.id, e.target.value as MemberType)}
+                      >
+                        <option value="MONTHLY">MONTHLY</option>
+                        <option value="GUEST">GUEST</option>
+                      </select>
                       <select
                         className="border p-2 rounded text-sm"
                         value={m.role}

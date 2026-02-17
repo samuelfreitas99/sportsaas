@@ -1,69 +1,40 @@
-# Sport SaaS – AI Agent Rules
+# AGENTS.md
+Guia operacional para agentes/IA no repositório SportSaaS.
 
-## Context
+## Regras de ouro
+1) NUNCA quebrar fluxos existentes (login, orgs, members, games, ledger).
+2) Toda mudança backend precisa:
+   - migrations Alembic
+   - schemas pydantic
+   - rotas registradas no main.py
+   - smoke test (PowerShell) documentado no README ou no CHECKLIST.
+3) Frontend:
+   - não usar Server Actions
+   - preferir páginas client-side simples com fetch/axios para /api/v1
+4) Banco (Postgres):
+   - Evitar `Base.metadata.create_all()` como fonte de schema.
+   - Alembic é a fonte da verdade.
+   - Enum em Postgres: cuidado com “type already exists” (usar checkfirst / create_type=False quando aplicável).
+5) Commits:
+   - não commitar `.next/`, `__pycache__/`, `.pyc`
+   - atualizar `.gitignore` se necessário
 
-This is a multi-tenant sports SaaS platform.
+## Convenções
+- API base: /api/v1
+- Auth: /api/v1/auth
+- Org-scoped: /api/v1/orgs/{org_id}/...
+- RBAC: OWNER > ADMIN > MEMBER
+- MemberType: MONTHLY (mensalista) vs GUEST (convidado/avulso)
 
-Stack:
-- FastAPI
-- SQLAlchemy 2.0
-- Alembic
-- PostgreSQL
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind
-- Docker Compose
+## Roadmap (alto nível)
+- Fase 1: Core social (orgs, members, games, attendance, ledger) ✅
+- Fase 2A: Billing + Charges ✅ (mínimo)
+- Fase 2B: Social completo (convidados, capitães, times, draft v1, cofre/mensalistas)
+- Fase 3: Marketplace (centros esportivos, unidades, quadras, disponibilidade, reservas)
+- Fase 4: Pagamentos reais, notificações, PWA avançado, multi-tenant avançado
 
----
-
-## Multi-Tenant Rules
-
-1. All data must be scoped by org_id.
-2. All organization routes must validate membership.
-3. Role hierarchy:
-   - OWNER
-   - ADMIN
-   - MEMBER
-4. Only OWNER/ADMIN can manage financial entries.
-5. OWNER cannot remove himself.
-
----
-
-## Backend Standards
-
-- UUID primary keys
-- Numeric(12,2) for money
-- Separate schemas: Create / Update / Response
-- Always use response_model
-- Always use Alembic for DB changes
-- Use model_dump() for Pydantic
-
----
-
-## Frontend Standards
-
-- Use App Router
-- Client components must declare 'use client'
-- JWT stored in localStorage
-- Use axios instance from lib/api.ts
-- Redirect to /login on 401
-- Store org id in localStorage as currentOrgId
-
----
-
-## Safety
-
-- Never remove working endpoints
-- Never hardcode secrets
-- Never change DB schema without migration
-
----
-
-## Development Priority
-
-1. Organization Members
-2. Attendance improvements
-3. Ledger improvements
-4. Draft Live
-5. Marketplace
-6. Centers / Courts
+## Critério de aceite geral
+- `docker compose up -d --build` funciona
+- `docker compose exec api alembic upgrade head` funciona (idempotente o máximo possível)
+- `apps/web` builda: `npm run build`
+- Rotas principais respondem via Swagger (/docs)

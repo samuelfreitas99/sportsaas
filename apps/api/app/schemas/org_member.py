@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
 
-from app.models.org_member import OrgRole
+from app.models.org_member import MemberType, OrgRole
 
 
 class OrgMemberBase(BaseModel):
@@ -16,6 +16,12 @@ class OrgMemberCreate(OrgMemberBase):
 
 class OrgMemberUpdateRole(BaseModel):
     role: OrgRole
+
+
+class OrgMemberUpdate(BaseModel):
+    nickname: str | None = None
+    member_type: MemberType | None = None
+    is_active: bool | None = None
 
 
 class OrgMemberUser(BaseModel):
@@ -32,6 +38,9 @@ class OrgMemberResponse(BaseModel):
     user_id: UUID
     org_id: UUID
     role: OrgRole
+    member_type: MemberType
+    nickname: str | None = None
+    is_active: bool
     created_at: datetime
     updated_at: datetime
     user: OrgMemberUser

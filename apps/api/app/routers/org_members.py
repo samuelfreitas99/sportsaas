@@ -10,6 +10,7 @@ from app.routers.deps import get_current_user, require_org_member
 from app.schemas.org_member import (
     OrgMemberCreate,
     OrgMemberResponse,
+    OrgMemberUpdate,
     OrgMemberUpdateRole,
 )
 
@@ -135,6 +136,44 @@ def update_member_role(
             raise HTTPException(status_code=400, detail="Cannot remove last OWNER")
 
     target.role = payload.role
+    db.commit()
+    db.refresh(target)
+    return target
+
+
+@router.patch("/orgs/{org_id}/members/{member_id}", response_model=OrgMemberResponse)
+def update_member(
+    org_id: UUID,
+    member_id: UUID,
+    payload: OrgMemberUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_org_member(org_id=org_id, db=db, current_user=current_user)
+
+    my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
+    if not my_membership:
+        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    if my_membership.role not in (OrgRole.OWNER, OrgRole.ADMIN):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    target = (
+        db.query(OrgMember)
+        .options(joinedload(OrgMember.user))
+        .filter(OrgMember.id == member_id, OrgMember.org_id == org_id)
+        .first()
+    )
+    if not target:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "nickname" in data:
+        target.nickname = data["nickname"]
+    if "member_type" in data:
+        target.member_type = data["member_type"]
+    if "is_active" in data:
+        target.is_active = data["is_active"]
+
     db.commit()
     db.refresh(target)
     return target

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import auth, organizations, games, ledger, org_members
+from app.routers import auth, organizations, games, ledger, org_members, billing, users
 from app.db.session import engine
 from app.db.base_class import Base
 import app.db.base  # garante que os models foram importados
@@ -28,6 +28,8 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(organizations.router, prefix="/api/v1/orgs", tags=["orgs"])
 app.include_router(org_members.router, prefix="/api/v1", tags=["org_members"])
+app.include_router(billing.router, prefix="/api/v1", tags=["billing"])
+app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(games.router, prefix="/api/v1", tags=["games"])
 app.include_router(ledger.router, prefix="/api/v1", tags=["ledger"])
 

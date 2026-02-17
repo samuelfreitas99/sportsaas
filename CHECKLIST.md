@@ -50,19 +50,20 @@
 
 ### 2B.7 Perfil do Membro (User + OrgMember)
 
-- [ ] Expandir User:
+- [x] Expandir User:
   - name (já existe?)
   - avatar_url (string)
   - phone (opcional)
-- [ ] Permitir upload ou definição de avatar (inicialmente URL simples)
-- [ ] Página /dashboard/profile
-- [ ] Permitir editar dados pessoais
+- [x] Permitir upload ou definição de avatar (inicialmente URL simples)
+- [x] Página /dashboard/profile
+- [x] Permitir editar dados pessoais
 
-- [ ] Expandir OrgMember:
+- [x] Expandir OrgMember:
   - nickname (opcional, apelido no grupo)
   - member_type: MONTHLY | GUEST
   - is_active (boolean)
-- [ ] Tela para editar tipo do membro (mensalista vs convidado fixo)
+- [x] Tela para editar tipo do membro (mensalista vs convidado fixo)
+
 
 ---
 

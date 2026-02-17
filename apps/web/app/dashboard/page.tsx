@@ -522,6 +522,12 @@ export default function Dashboard() {
                           >
                             Convidados
                           </button>
+                          <button
+                            onClick={() => router.push(`/dashboard/games/${game.id}`)}
+                            className="border px-3 py-1 rounded hover:bg-gray-50"
+                          >
+                            Detalhes
+                          </button>
                         </div>
                       </div>
 

@@ -28,11 +28,32 @@ class Game(Base):
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by_member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=True, index=True
+    )
+    captain_a_member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=True, index=True
+    )
+    captain_b_member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=True, index=True
+    )
+    captain_a_guest_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("game_guests.id"), nullable=True, index=True
+    )
+    captain_b_guest_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("game_guests.id"), nullable=True, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     organization = relationship("Organization", back_populates="games")
+    game_guests = relationship("GameGuest", foreign_keys="GameGuest.game_id")
+    created_by_member = relationship("OrgMember", foreign_keys=[created_by_member_id])
+    captain_a_member = relationship("OrgMember", foreign_keys=[captain_a_member_id])
+    captain_b_member = relationship("OrgMember", foreign_keys=[captain_b_member_id])
+    captain_a_guest = relationship("GameGuest", foreign_keys=[captain_a_guest_id])
+    captain_b_guest = relationship("GameGuest", foreign_keys=[captain_b_guest_id])
     attendances = relationship("GameAttendance", back_populates="game", cascade="all, delete-orphan")
 
 

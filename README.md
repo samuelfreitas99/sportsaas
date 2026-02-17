@@ -132,6 +132,52 @@ Invoke-RestMethod -Method Patch "http://localhost:8000/api/v1/orgs/$orgId/member
 # checar flags na attendance summary
 Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/attendance" -Headers $headers
 
+Game Details (Phase 2B.8)
+Endpoint:
+
+GET /api/v1/orgs/{org_id}/games/{game_id}
+
+Retorna:
+- Dados do jogo (start_at, location, created_by quando disponível)
+- attendance_summary + attendance_list (com member_type + included/billable)
+- game_guests (billable/source)
+- captains (A/B)
+- teams (A/B)
+
+Smoke tests (PowerShell)
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId" -Headers $headers
+
+Capitães e Times A/B (Phase 2B.9)
+Endpoints:
+
+PUT /api/v1/orgs/{org_id}/games/{game_id}/captains (OWNER/ADMIN; mode: MANUAL | RANDOM)
+
+GET /api/v1/orgs/{org_id}/games/{game_id}/teams
+
+PUT /api/v1/orgs/{org_id}/games/{game_id}/teams (OWNER/ADMIN; team: A | B | null)
+
+Migration:
+
+b1c2d3e4f5a6_phase_2b9_captains_teams.py
+
+Smoke tests (PowerShell)
+# sortear capitães
+Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/captains" -Headers $headers `
+  -ContentType "application/json" -Body (@{ mode="RANDOM"; captain_a=$null; captain_b=$null } | ConvertTo-Json)
+
+# definir capitães manualmente (member GOING)
+$detail = Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId" -Headers $headers
+$memberGoingId = ($detail.attendance_list | Where-Object { $_.status -eq "GOING" } | Select-Object -First 1).org_member_id
+
+Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/captains" -Headers $headers `
+  -ContentType "application/json" -Body (@{ mode="MANUAL"; captain_a=@{ type="MEMBER"; id=$memberGoingId }; captain_b=$null } | ConvertTo-Json)
+
+# montar times
+Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/teams" -Headers $headers `
+  -ContentType "application/json" -Body (@{ target=@{ type="MEMBER"; id=$memberGoingId }; team="A" } | ConvertTo-Json)
+
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/teams" -Headers $headers
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

@@ -1,168 +1,261 @@
-# CHECKLIST.md — Sport SaaS
+# 📄 CHECKLIST.md — Sport SaaS
 
 ## Como usar
-- Cada fase deve ser concluída em pequenos PRs/commits.
-- Marque [x] ao concluir e registre decisões em "Notas".
+
+* Cada fase deve ser concluída em pequenos PRs/commits.
+* Marque `[x]` ao concluir.
+* Registre decisões importantes na seção **Notas**.
 
 ---
 
-## Fase 2B — Social completo (antes do Marketplace)
-
-### 2B.0 Hardening de repo
-- [ ] Adicionar/ajustar `.gitignore` para impedir commit de:
-  - `.next/`
-  - `__pycache__/`
-  - `*.pyc`
-  - `node_modules/`
-- [ ] Garantir que nenhum artefato de build entrou no Git (limpar se já entrou)
-
-### 2B.1 Attendance consolidada
-
-- [x] Definir enum AttendanceStatus: GOING | MAYBE | NOT_GOING
-- [x] Garantir endpoints consistentes por org e por game (org-scoped)
-- [x] Tela do game (ou lista) mostrando contagens e status do usuário
-- [x] Migration segura/idempotente (criar enum/table se não existir; backfill e índices quando já existir)
-- [x] README + smoke tests atualizados
-
-
-### 2B.2 Convidados
-- [x] Permitir adicionar convidados por jogo (snapshot name/phone, sem login)
-- [x] Criar catálogo por org (org_guests) + convidados por jogo (game_guests)
-- [x] Regras: convidado não é User/OrgMember; existe por jogo e pode vir do catálogo
-
-### 2B.3 Cofre / Mensalistas
-- [x] Definir member_type no OrgMember: MONTHLY vs GUEST
-- [x] Tela simples para marcar tipo do membro
-- [ ] Ajustar geração de charges:
-  - mensalista: cobrança fixa por ciclo
-  - convidado: cobrança por presença (PER_SESSION)
-
-### 2B.4 Capitães e times do jogo
-- [ ] Campo captains no game: manual ou sorteio
-- [ ] Times A/B: atribuir jogadores presentes
-- [ ] UI simples para organizar times
-
-### 2B.5 Draft v1 (sem realtime)
-- [ ] Draft por turnos (ordem definida, picks registrados)
-- [ ] Persistência no backend (draft_state)
-- [ ] UI mínima para picks + bloqueios
-
-### 2B.6 Ajustes do Billing (Phase 2A)
-- [ ] Garantir migrations idempotentes (evitar erro de enum/tabela já existente)
-- [ ] Garantir: marcar charge PAID -> ledger INCOME (já existe, validar)
-- [ ] Smoke tests atualizados no README
-
-### 2B.7 Perfil do Membro (User + OrgMember)
-
-- [x] Expandir User:
-  - name (já existe?)
-  - avatar_url (string)
-  - phone (opcional)
-- [x] Permitir upload ou definição de avatar (inicialmente URL simples)
-- [x] Página /dashboard/profile
-- [x] Permitir editar dados pessoais
-
-- [x] Expandir OrgMember:
-  - nickname (opcional, apelido no grupo)
-  - member_type: MONTHLY | GUEST
-  - is_active (boolean)
-- [x] Tela para editar tipo do membro (mensalista vs convidado fixo)
-
+# 🚀 Fase 2B — Social Completo (antes do Marketplace)
 
 ---
 
-### 2B.8 Página Detalhe do Jogo (Game Details)
+## ✅ 2B.0 Hardening de Repositório
 
-- [ ] Criar página /dashboard/games/[id]
-- [ ] Exibir:
-  - Data, horário, local
-  - Lista de presença (GOING/MAYBE/NOT_GOING)
-  - Contagem total
-  - Convidados adicionados
-- [ ] Botão rápido para:
-  - Marcar presença
-  - Adicionar convidado
-  - Definir capitães (futuro)
-  - Iniciar draft (futuro)
+* [x] `.gitignore` configurado para impedir commit de:
+
+  * [x] `.next/`
+  * [x] `__pycache__/`
+  * [x] `*.pyc`
+  * [x] `node_modules/`
+* [x] Garantir que nenhum artefato de build está versionado
 
 ---
 
-### 2B.9 Capitães e Times
+## ✅ 2B.1 Attendance Consolidada (org-scoped)
 
-- [ ] Campo no Game:
-  - captain_a_id
-  - captain_b_id
-- [ ] Opção:
-  - Seleção manual
-  - Sorteio automático
-- [ ] Regra anti-repetição:
-  - Não repetir capitão em jogos consecutivos se houver outros elegíveis
-- [ ] UI para montar Times A/B manualmente
+* [x] Enum `AttendanceStatus`: `GOING | MAYBE | NOT_GOING`
+* [x] Endpoint org-scoped:
+
+  * [x] `/orgs/{org_id}/games/{game_id}/attendance`
+* [x] Migration idempotente segura
+* [x] Tela exibindo contagens + status do usuário
+* [x] README + smoke tests atualizados
 
 ---
 
-### 2B.10 Draft v1 (sem realtime)
+## ✅ 2B.2 Convidados (Guests)
 
-- [ ] Modelo draft_state persistido no backend
-- [ ] Ordem de picks definida (A-B-B-A ou configurável)
-- [ ] Registrar picks por rodada
-- [ ] Impedir duplicidade de jogador
-- [ ] UI simples de seleção
-- [ ] Encerrar draft e salvar times finais
+### Modelagem
 
----
+* [x] `org_guests` (catálogo por organização)
+* [x] `game_guests` (snapshot por jogo)
+* [x] Convidado não é `User` nem `OrgMember`
+* [x] Snapshot pode vir do catálogo
 
-### 2B.11 RBAC e Permissões Refinadas
+### Backend
 
-- [ ] OWNER/ADMIN podem:
-  - Editar jogo
-  - Definir capitães
-  - Iniciar draft
-  - Gerenciar convidados
-- [ ] MEMBER pode:
-  - Marcar presença
-  - Ver draft
-- [ ] Validar todas rotas sensíveis
+* [x] Endpoints org-scoped
+* [x] Flag `billable=true` para convidados sem login
+
+### Frontend
+
+* [x] UI mínima no `/dashboard`
 
 ---
 
-### 2B.12 Testes Rápidos (Smoke Tests por Fase)
+## ✅ 2B.3 Mensalistas vs Convidados Fixos (member_type)
 
-- [ ] Criar bloco no README com:
-  - Attendance test
-  - Guest test
-  - Draft test
-  - Captain selection test
-- [ ] Garantir build limpo:
-  - docker compose up -d --build
-  - alembic upgrade head
-  - npm run build (apps/web)
+### Modelagem
 
+* [x] `OrgMember.member_type: MONTHLY | GUEST`
+* [x] `is_active`
+* [x] `nickname`
+* [x] Migration segura com defaults + índices
 
-## Fase 3 — Marketplace (centros esportivos)
+### Backend
 
-### 3.0 Modelo e visibilidade
-- [ ] OrgType: GROUP vs CENTER/BUSINESS
-- [ ] Visibilidade: PRIVATE | MARKETPLACE | HYBRID
+* [x] PATCH org-scoped com permissões refinadas
+* [x] Attendance retorna:
 
-### 3.1 Estrutura do centro esportivo
-- [ ] Units/Locations (unidades)
-- [ ] Courts (quadras)
-- [ ] Photos (opcional depois)
-- [ ] Policies (cancelamento, antecedência, etc.)
+  * [x] `member_type`
+  * [x] `included`
+  * [x] `billable`
 
-### 3.2 Disponibilidade e reservas
-- [ ] Templates de horários por quadra
-- [ ] Bloqueios (manutenção/eventos)
-- [ ] Reservas: status PENDING/CONFIRMED/CANCELLED
-- [ ] Integração financeira (ledger + cobrança)
+### Frontend
 
-### 3.3 Busca pública (estilo Airbnb)
-- [ ] Página pública com filtros (cidade/bairro, esporte, preço, horário)
-- [ ] Página do centro
-- [ ] Página da quadra + agenda
+* [x] UI para editar tipo do membro em `/dashboard/members`
+* [x] Badges MONTHLY/GUEST na presença
+
+### ⚠️ Pendente (entra na Fase 2C — Billing)
+
+* [ ] Geração automática de charges:
+
+  * [ ] Mensalista → cobrança por ciclo
+  * [ ] Convidado fixo → cobrança por presença
 
 ---
 
-## Notas / Decisões
-- (preencha aqui)
+## ✅ 2B.7 Perfil do Membro (User + OrgMember)
+
+### User
+
+* [x] `full_name`
+* [x] `avatar_url`
+* [x] `phone`
+* [x] Página `/dashboard/profile`
+* [x] Editar dados pessoais
+
+### OrgMember
+
+* [x] `nickname` integrado à UI
+
+---
+
+# 🔜 Próximas Fases Sociais
+
+---
+
+## 🟡 2B.8 Página Detalhe do Jogo (Game Details)
+
+* [x] Criar página `/dashboard/games/[id]`
+* [x] Endpoint detalhado:
+
+  * [x] `/orgs/{org_id}/games/{game_id}`
+* [x] Exibir:
+
+  * [x] Data / horário
+  * [x] Lista de presença
+  * [x] Contagens
+  * [x] Convidados do jogo
+* [x] Botões rápidos:
+
+  * [x] Marcar presença
+  * [x] Adicionar convidado
+  * [ ] Definir capitães (futuro)
+  * [ ] Iniciar draft (futuro)
+
+---
+
+## 🟡 2B.9 Capitães e Times
+
+### Backend
+
+* [x] Campo no Game:
+
+  * [x] `captain_a_member_id` / `captain_a_guest_id`
+  * [x] `captain_b_member_id` / `captain_b_guest_id`
+* [x] Seleção:
+
+  * [x] Manual
+  * [x] Sorteio automático
+* [x] Regra anti-repetição de capitão
+
+### Frontend
+
+* [x] UI para montar Times A/B
+
+---
+
+## 🟡 2B.10 Draft v1 (sem realtime)
+
+### Backend
+
+* [ ] Modelo `draft_state` persistido
+* [ ] Ordem A-B-B-A (ou configurável)
+* [ ] Registrar picks
+* [ ] Impedir duplicidade
+
+### Frontend
+
+* [ ] UI simples de seleção
+* [ ] Encerrar draft e salvar times
+
+---
+
+## 🟡 2B.11 RBAC e Permissões Refinadas
+
+### OWNER / ADMIN podem:
+
+* [ ] Editar jogo
+* [ ] Definir capitães
+* [ ] Iniciar draft
+* [ ] Gerenciar convidados
+
+### MEMBER pode:
+
+* [ ] Marcar presença
+
+* [ ] Ver draft
+
+* [ ] Validar todas rotas sensíveis
+
+---
+
+## 🟡 2B.12 Smoke Tests por Fase
+
+* [ ] Bloco no README com:
+
+  * [ ] Attendance test
+  * [ ] Guest test
+  * [ ] Draft test
+  * [ ] Captain selection test
+* [ ] Validar build limpo:
+
+  * [ ] `docker compose up -d --build`
+  * [ ] `alembic upgrade head`
+  * [ ] `npm run build`
+
+---
+
+# 💰 Fase 2C — Cofre / Billing Inteligente
+
+(Entrará após Capitães/Draft)
+
+* [ ] Cobrança por ciclo para `MONTHLY`
+* [ ] Cobrança por presença para `GUEST`
+* [ ] Integração com ledger
+* [ ] Geração automática de charges
+* [ ] Dashboard financeiro por organização
+
+---
+
+# 🏟 Fase 3 — Marketplace (Centros Esportivos)
+
+---
+
+## 3.0 Modelo e Visibilidade
+
+* [ ] `OrgType: GROUP | CENTER`
+* [ ] `Visibilidade: PRIVATE | MARKETPLACE | HYBRID`
+
+---
+
+## 3.1 Estrutura do Centro
+
+* [ ] Units
+* [ ] Courts
+* [ ] Photos
+* [ ] Policies
+
+---
+
+## 3.2 Disponibilidade e Reservas
+
+* [ ] Templates de horários
+* [ ] Bloqueios
+* [ ] Reservas `PENDING | CONFIRMED | CANCELLED`
+* [ ] Integração financeira
+
+---
+
+## 3.3 Busca Pública estilo Airbnb
+
+* [ ] Página pública com filtros
+* [ ] Página do centro
+* [ ] Página da quadra + agenda
+
+---
+
+# 📝 Notas / Decisões
+
+* `member_type` influencia cobrança futura
+* `game_guest` sempre `billable=true`
+* Attendance é org-scoped
+* Convidado não vira automaticamente membro
+
+---
+
+

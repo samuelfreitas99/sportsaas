@@ -46,6 +46,8 @@ class GameGuestResponse(GameGuestBase):
     org_guest_id: UUID | None = None
     created_by_member_id: UUID
     can_delete: bool
+    source: str
+    billable: bool
     created_at: datetime
     updated_at: datetime
 

@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr
 
 from app.models.game import AttendanceStatus
+from app.models.org_member import MemberType
 
 
 class AttendanceSetRequest(BaseModel):
@@ -29,6 +30,9 @@ class AttendanceMemberUser(BaseModel):
 class AttendanceMember(BaseModel):
     id: UUID
     nickname: str | None = None
+    member_type: MemberType
+    billable: bool
+    included: bool
     user: AttendanceMemberUser
 
     class Config:
@@ -51,5 +55,8 @@ class AttendanceRow(BaseModel):
 class GameAttendanceSummary(BaseModel):
     counts: AttendanceCounts
     my_status: AttendanceStatus | None = None
+    my_member_type: MemberType | None = None
+    my_billable: bool | None = None
+    my_included: bool | None = None
     going_members: list[AttendanceMember]
 

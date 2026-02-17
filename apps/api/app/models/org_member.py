@@ -35,7 +35,7 @@ class OrgMember(Base):
 
     role: Mapped[OrgRole] = mapped_column(Enum(OrgRole, name="org_role"), default=OrgRole.MEMBER, nullable=False)
     member_type: Mapped[MemberType] = mapped_column(
-        Enum(MemberType, name="member_type"), default=MemberType.MONTHLY, nullable=False
+        Enum(MemberType, name="member_type"), default=MemberType.GUEST, nullable=False
     )
     nickname: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

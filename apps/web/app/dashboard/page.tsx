@@ -33,13 +33,20 @@ interface LedgerSummary {
 }
 
 type AttendanceStatus = 'GOING' | 'MAYBE' | 'NOT_GOING'
+type MemberType = 'MONTHLY' | 'GUEST'
 
 type AttendanceSummary = {
   counts: { going: number; maybe: number; not_going: number }
   my_status?: AttendanceStatus | null
+  my_member_type?: MemberType | null
+  my_billable?: boolean | null
+  my_included?: boolean | null
   going_members: Array<{
     id: string
     nickname?: string | null
+    member_type: MemberType
+    billable: boolean
+    included: boolean
     user: { email: string; full_name?: string | null; avatar_url?: string | null }
   }>
 }
@@ -55,6 +62,8 @@ type GameGuest = {
   name: string
   phone?: string | null
   can_delete: boolean
+  source: 'GAME_GUEST'
+  billable: true
 }
 
 export default function Dashboard() {
@@ -526,7 +535,23 @@ export default function Dashboard() {
                               <span className="text-red-700">NOT: {attendanceByGame[game.id].counts.not_going}</span>
                             </div>
                             <div className="mt-1 text-gray-600">
-                              My status: <span className="font-semibold">{attendanceByGame[game.id].my_status ?? '-'}</span>
+                              My status:{' '}
+                              <span className="font-semibold">{attendanceByGame[game.id].my_status ?? '-'}</span>
+                              {attendanceByGame[game.id].my_member_type && (
+                                <span className="ml-2 text-xs px-2 py-0.5 rounded border bg-gray-50 text-gray-700 border-gray-200">
+                                  {attendanceByGame[game.id].my_member_type}
+                                </span>
+                              )}
+                              {attendanceByGame[game.id].my_included && (
+                                <span className="ml-2 text-xs px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
+                                  included
+                                </span>
+                              )}
+                              {attendanceByGame[game.id].my_billable && (
+                                <span className="ml-2 text-xs px-2 py-0.5 rounded border bg-yellow-50 text-yellow-800 border-yellow-200">
+                                  billable
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -534,8 +559,27 @@ export default function Dashboard() {
                             <div className="text-sm text-gray-500 mb-1">GOING members</div>
                             <div className="flex flex-wrap gap-2">
                               {attendanceByGame[game.id].going_members.map(m => (
-                                <div key={m.id} className="text-sm border rounded px-2 py-1 bg-gray-50">
-                                  {m.nickname || m.user.full_name || m.user.email}
+                                <div key={m.id} className="text-sm border rounded px-2 py-1 bg-gray-50 flex items-center gap-2">
+                                  <span>{m.nickname || m.user.full_name || m.user.email}</span>
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded border ${
+                                      m.member_type === 'MONTHLY'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                    }`}
+                                  >
+                                    {m.member_type}
+                                  </span>
+                                  {m.included && (
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
+                                      included
+                                    </span>
+                                  )}
+                                  {m.billable && (
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-yellow-50 text-yellow-800 border-yellow-200">
+                                      billable
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                               {attendanceByGame[game.id].going_members.length === 0 && (
@@ -566,7 +610,15 @@ export default function Dashboard() {
                             {(gameGuestsByGame[game.id] ?? []).map(g => (
                               <div key={g.id} className="flex items-center justify-between border rounded p-2">
                                 <div className="min-w-0">
-                                  <div className="font-semibold truncate">{g.name}</div>
+                                  <div className="font-semibold truncate flex items-center gap-2">
+                                    <span>{g.name}</span>
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-yellow-50 text-yellow-800 border-yellow-200">
+                                      billable
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-gray-50 text-gray-700 border-gray-200">
+                                      {g.source}
+                                    </span>
+                                  </div>
                                   <div className="text-xs text-gray-500 truncate">{g.phone ?? '-'}</div>
                                 </div>
                                 {g.can_delete && (

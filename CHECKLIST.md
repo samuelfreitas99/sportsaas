@@ -31,8 +31,8 @@
 - [x] Regras: convidado não é User/OrgMember; existe por jogo e pode vir do catálogo
 
 ### 2B.3 Cofre / Mensalistas
-- [ ] Definir member_type no OrgMember: MONTHLY vs GUEST
-- [ ] Tela simples para marcar tipo do membro
+- [x] Definir member_type no OrgMember: MONTHLY vs GUEST
+- [x] Tela simples para marcar tipo do membro
 - [ ] Ajustar geração de charges:
   - mensalista: cobrança fixa por ciclo
   - convidado: cobrança por presença (PER_SESSION)

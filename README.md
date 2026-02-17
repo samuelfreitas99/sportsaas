@@ -109,6 +109,29 @@ $gameGuestId = $list[0].id
 
 Invoke-RestMethod -Method Delete "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/guests/$gameGuestId" -Headers $headers
 
+Mensalistas vs Convidados fixos (Phase 2B.3)
+OrgMember.member_type:
+- MONTHLY: mensalista (included=true, billable=false na presença)
+- GUEST: convidado fixo (included=false, billable=true na presença)
+game_guests (sem login): sempre billable=true (source=GAME_GUEST)
+
+Default desejado para novos OrgMembers: member_type=GUEST
+
+Migration:
+
+f3a4b5c6d7e8_phase_2b3_monthly_vs_guest.py
+
+Smoke tests (PowerShell)
+# promover/diminuir member_type e is_active (OWNER/ADMIN)
+$members = Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/members" -Headers $headers
+$memberId = $members[0].id
+
+Invoke-RestMethod -Method Patch "http://localhost:8000/api/v1/orgs/$orgId/members/$memberId" -Headers $headers `
+  -ContentType "application/json" -Body (@{ member_type="MONTHLY"; is_active=$true; nickname="Mensalista" } | ConvertTo-Json)
+
+# checar flags na attendance summary
+Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/attendance" -Headers $headers
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

@@ -154,8 +154,6 @@ def update_member(
     my_membership = _get_membership(db=db, org_id=org_id, user_id=current_user.id)
     if not my_membership:
         raise HTTPException(status_code=403, detail="Not a member of this organization")
-    if my_membership.role not in (OrgRole.OWNER, OrgRole.ADMIN):
-        raise HTTPException(status_code=403, detail="Not authorized")
 
     target = (
         db.query(OrgMember)
@@ -167,11 +165,24 @@ def update_member(
         raise HTTPException(status_code=404, detail="Member not found")
 
     data = payload.model_dump(exclude_unset=True)
-    if "nickname" in data:
+    wants_nickname = "nickname" in data
+    wants_member_type = "member_type" in data
+    wants_is_active = "is_active" in data
+
+    is_admin = my_membership.role in (OrgRole.OWNER, OrgRole.ADMIN)
+    is_self = my_membership.id == target.id
+
+    if wants_member_type or wants_is_active:
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+    if wants_nickname:
+        if not (is_admin or is_self):
+            raise HTTPException(status_code=403, detail="Not authorized")
         target.nickname = data["nickname"]
-    if "member_type" in data:
+    if wants_member_type:
         target.member_type = data["member_type"]
-    if "is_active" in data:
+    if wants_is_active:
         target.is_active = data["is_active"]
 
     db.commit()

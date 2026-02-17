@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from app.db.session import get_db
 from app.models.game import AttendanceStatus, Game, GameAttendance
-from app.models.org_member import OrgMember, OrgRole
+from app.models.org_member import MemberType, OrgMember, OrgRole
 from app.schemas.game import GameCreate, Game as GameSchema, AttendanceCreate, Attendance
 from app.routers.deps import get_current_user
 from app.models.user import User
@@ -100,7 +100,25 @@ def get_game_attendance(
         )
         .all()
     )
-    going_members = [r.org_member for r in going_rows if r.org_member is not None]
+    going_members = []
+    for r in going_rows:
+        if not r.org_member:
+            continue
+        mt = r.org_member.member_type
+        included = mt == MemberType.MONTHLY
+        going_members.append(
+            {
+                "id": r.org_member.id,
+                "nickname": r.org_member.nickname,
+                "member_type": mt,
+                "billable": not included,
+                "included": included,
+                "user": r.org_member.user,
+            }
+        )
+
+    my_member_type = membership.member_type
+    my_included = my_member_type == MemberType.MONTHLY
 
     return {
         "counts": {
@@ -109,6 +127,9 @@ def get_game_attendance(
             "not_going": counts_map.get("NOT_GOING", 0),
         },
         "my_status": my.status if my else None,
+        "my_member_type": my_member_type,
+        "my_billable": not my_included,
+        "my_included": my_included,
         "going_members": going_members,
     }
 

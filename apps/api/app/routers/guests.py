@@ -186,6 +186,8 @@ def list_game_guests(
                 phone=r.phone,
                 created_by_member_id=r.created_by_member_id,
                 can_delete=is_admin or (r.created_by_member_id == membership.id),
+                source="GAME_GUEST",
+                billable=True,
                 created_at=r.created_at,
                 updated_at=r.updated_at,
             )
@@ -263,6 +265,8 @@ def create_game_guest(
         phone=row.phone,
         created_by_member_id=row.created_by_member_id,
         can_delete=is_admin or (row.created_by_member_id == membership.id),
+        source="GAME_GUEST",
+        billable=True,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )

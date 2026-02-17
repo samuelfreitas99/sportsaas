@@ -6,6 +6,7 @@ from app.models.game import Game, GameAttendance
 from app.models.org_guest import OrgGuest
 from app.models.game_guest import GameGuest
 from app.models.game_team import GameTeamMember, GameTeamGuest
+from app.models.game_draft import GameDraft, GameDraftPick
 from app.models.ledger import LedgerEntry
 from app.models.plan import Plan, OrgSubscription
 from app.models.org_billing_settings import OrgBillingSettings

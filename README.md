@@ -178,6 +178,41 @@ Invoke-RestMethod -Method Put "http://localhost:8000/api/v1/orgs/$orgId/games/$g
 
 Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/teams" -Headers $headers
 
+Draft v1 (Phase 2B.10)
+Endpoints:
+
+POST /api/v1/orgs/{org_id}/games/{game_id}/draft/start (OWNER/ADMIN)
+
+POST /api/v1/orgs/{org_id}/games/{game_id}/draft/pick (OWNER/ADMIN)
+
+POST /api/v1/orgs/{org_id}/games/{game_id}/draft/finish (OWNER/ADMIN)
+
+GET /api/v1/orgs/{org_id}/games/{game_id}/draft
+
+Migration:
+
+c3d4e5f6a7b8_phase_2b10_draft_v1.py
+
+Smoke tests (PowerShell)
+# iniciar draft
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/start" -Headers $headers
+
+# pegar estado e fazer pick do turno
+$draft = Invoke-RestMethod -Method Get "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft" -Headers $headers
+$turn = $draft.current_turn_team_side
+$first = $draft.remaining_pool[0]
+
+if ($first.type -eq "MEMBER") {
+  $body = @{ team_side=$turn; org_member_id=$first.org_member_id; game_guest_id=$null }
+} else {
+  $body = @{ team_side=$turn; game_guest_id=$first.game_guest_id; org_member_id=$null }
+}
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/pick" -Headers $headers `
+  -ContentType "application/json" -Body ($body | ConvertTo-Json)
+
+# finalizar
+Invoke-RestMethod -Method Post "http://localhost:8000/api/v1/orgs/$orgId/games/$gameId/draft/finish" -Headers $headers
+
 Billing (Phase 2A)
 Configuração por org e cobranças (charges), com integração:
 

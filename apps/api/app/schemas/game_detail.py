@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.models.game import AttendanceStatus
 from app.models.org_member import MemberType
+from app.schemas.draft import DraftSummary
 from app.schemas.teams import CaptainsResolved, TeamsResponse
 
 
@@ -67,3 +68,4 @@ class GameDetailResponse(BaseModel):
     game_guests: list[GameDetailGuest]
     captains: CaptainsResolved
     teams: TeamsResponse
+    draft: DraftSummary

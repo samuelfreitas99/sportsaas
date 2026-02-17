@@ -153,15 +153,15 @@
 
 ### Backend
 
-* [ ] Modelo `draft_state` persistido
-* [ ] Ordem A-B-B-A (ou configurável)
-* [ ] Registrar picks
-* [ ] Impedir duplicidade
+* [x] Modelo `draft_state` persistido
+* [x] Ordem A-B-B-A (ou configurável)
+* [x] Registrar picks
+* [x] Impedir duplicidade
 
 ### Frontend
 
-* [ ] UI simples de seleção
-* [ ] Encerrar draft e salvar times
+* [x] UI simples de seleção
+* [x] Encerrar draft e salvar times
 
 ---
 

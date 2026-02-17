@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 type AttendanceStatus = 'GOING' | 'MAYBE' | 'NOT_GOING'
 type MemberType = 'MONTHLY' | 'GUEST'
 type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER'
+type TeamSide = 'A' | 'B'
+type DraftStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'FINISHED'
 
 type CaptainResolved =
   | {
@@ -79,9 +81,46 @@ type GameDetail = {
   game_guests: Array<{ id: string; name: string; phone?: string | null; billable: boolean; source: string }>
   captains: { captain_a?: CaptainResolved | null; captain_b?: CaptainResolved | null }
   teams: Teams
+  draft: {
+    status: DraftStatus
+    current_turn_team_side?: TeamSide | null
+    picks_count: number
+    remaining_count: number
+  }
 }
 
 type OrgGuest = { id: string; name: string; phone?: string | null }
+
+type DraftPickItem =
+  | {
+      type: 'MEMBER'
+      org_member_id: string
+      nickname?: string | null
+      member_type: MemberType
+      included: boolean
+      billable: boolean
+      user: { id: string; email: string; full_name?: string | null; avatar_url?: string | null }
+    }
+  | { type: 'GUEST'; game_guest_id: string; name: string; phone?: string | null; billable: true; source: 'GAME_GUEST' }
+
+type DraftPick = {
+  id: string
+  round_number: number
+  pick_number: number
+  team_side: TeamSide
+  created_at: string
+  item: DraftPickItem
+}
+
+type DraftState = {
+  status: DraftStatus
+  order_mode: string
+  current_pick_index: number
+  current_turn_team_side?: TeamSide | null
+  picks: DraftPick[]
+  remaining_pool: DraftPickItem[]
+  teams: Teams
+}
 
 export default function GameDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -92,6 +131,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
   const [orgGuests, setOrgGuests] = useState<OrgGuest[]>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [meUserId, setMeUserId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<DraftState | null>(null)
 
   const [attendanceSet, setAttendanceSet] = useState<AttendanceStatus>('GOING')
   const [guestMode, setGuestMode] = useState<'CATALOG' | 'SNAPSHOT'>('SNAPSHOT')
@@ -131,6 +171,16 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
     }
   }
 
+  const fetchDraft = async (org_id: string, game_id: string) => {
+    try {
+      const res = await api.get(`/orgs/${org_id}/games/${game_id}/draft`)
+      setDraft(res.data)
+    } catch (e) {
+      console.error(e)
+      setDraft(null)
+    }
+  }
+
   const fetchMyRole = async (org_id: string) => {
     try {
       const meRes = await api.get('/users/me')
@@ -158,6 +208,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
     fetchGame(orgId, params.id)
     fetchOrgGuests(orgId)
     fetchMyRole(orgId)
+    fetchDraft(orgId, params.id)
   }, [orgId, params.id])
 
   const title = useMemo(() => {
@@ -217,6 +268,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
     try {
       await api.put(`/orgs/${orgId}/games/${params.id}/attendance`, { status: attendanceSet })
       await fetchGame(orgId, params.id)
+      await fetchDraft(orgId, params.id)
     } catch (e) {
       console.error(e)
       setError('Falha ao marcar presença')
@@ -235,6 +287,7 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
       setGuestName('')
       setGuestPhone('')
       await fetchGame(orgId, params.id)
+      await fetchDraft(orgId, params.id)
     } catch (e) {
       console.error(e)
       setError('Falha ao adicionar convidado')
@@ -281,9 +334,58 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
     try {
       await api.put(`/orgs/${orgId}/games/${params.id}/teams`, { target, team })
       await fetchGame(orgId, params.id)
+      await fetchDraft(orgId, params.id)
     } catch (e) {
       console.error(e)
       setError('Falha ao atualizar time')
+    }
+  }
+
+  const startDraft = async () => {
+    if (!orgId) return
+    if (!isAdmin) return
+    setError(null)
+    try {
+      await api.post(`/orgs/${orgId}/games/${params.id}/draft/start`)
+      await fetchDraft(orgId, params.id)
+      await fetchGame(orgId, params.id)
+    } catch (e) {
+      console.error(e)
+      setError('Falha ao iniciar draft')
+    }
+  }
+
+  const pickDraft = async (item: DraftPickItem) => {
+    if (!orgId) return
+    if (!isAdmin) return
+    const turn = draft?.current_turn_team_side
+    if (!turn) return
+    setError(null)
+    try {
+      const body =
+        item.type === 'MEMBER'
+          ? { team_side: turn, org_member_id: item.org_member_id, game_guest_id: null }
+          : { team_side: turn, game_guest_id: item.game_guest_id, org_member_id: null }
+      await api.post(`/orgs/${orgId}/games/${params.id}/draft/pick`, body)
+      await fetchDraft(orgId, params.id)
+      await fetchGame(orgId, params.id)
+    } catch (e) {
+      console.error(e)
+      setError('Falha ao fazer pick')
+    }
+  }
+
+  const finishDraft = async () => {
+    if (!orgId) return
+    if (!isAdmin) return
+    setError(null)
+    try {
+      await api.post(`/orgs/${orgId}/games/${params.id}/draft/finish`)
+      await fetchDraft(orgId, params.id)
+      await fetchGame(orgId, params.id)
+    } catch (e) {
+      console.error(e)
+      setError('Falha ao finalizar draft')
     }
   }
 
@@ -802,6 +904,128 @@ export default function GameDetailsPage({ params }: { params: { id: string } }) 
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-white p-6 rounded shadow">
+              <h2 className="text-xl font-bold mb-4">Draft v1</h2>
+
+              <div className="text-sm text-gray-700">
+                <div>
+                  <span className="text-gray-500">Status:</span> <span className="font-semibold">{draft?.status ?? game.draft.status}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Turno:</span>{' '}
+                  <span className="font-semibold">{draft?.current_turn_team_side ?? game.draft.current_turn_team_side ?? '-'}</span>
+                </div>
+              </div>
+
+              {isAdmin && (draft?.status ?? game.draft.status) === 'NOT_STARTED' && (
+                <button onClick={startDraft} className="mt-3 w-full bg-blue-600 text-white px-4 py-2 rounded">
+                  Iniciar draft
+                </button>
+              )}
+
+              {!isAdmin && <div className="text-xs text-gray-500 mt-2">Apenas OWNER/ADMIN controla o draft.</div>}
+
+              {draft && (
+                <>
+                  <div className="mt-4 border-t pt-4">
+                    <div className="font-bold mb-2">Disponíveis</div>
+                    <div className="space-y-2">
+                      {draft.remaining_pool.map(item => (
+                        <div key={item.type === 'MEMBER' ? item.org_member_id : item.game_guest_id} className="border rounded p-2 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">
+                              {item.type === 'MEMBER'
+                                ? item.nickname || item.user.full_name || item.user.email
+                                : item.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {item.type === 'MEMBER' ? item.user.email : item.phone ?? '-'}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {item.type === 'MEMBER' ? (
+                                <>
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded border ${
+                                      item.member_type === 'MONTHLY'
+                                        ? 'bg-green-50 text-green-700 border-green-200'
+                                        : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                                    }`}
+                                  >
+                                    {item.member_type}
+                                  </span>
+                                  {item.included && (
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">
+                                      Included
+                                    </span>
+                                  )}
+                                  {item.billable && (
+                                    <span className="text-xs px-2 py-0.5 rounded border bg-yellow-50 text-yellow-800 border-yellow-200">
+                                      Billable
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-xs px-2 py-0.5 rounded border bg-yellow-50 text-yellow-800 border-yellow-200">
+                                    Billable
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded border bg-gray-50 text-gray-700 border-gray-200">
+                                    {item.source}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => pickDraft(item)}
+                              className="text-sm px-3 py-2 rounded border hover:bg-gray-50"
+                              disabled={!isAdmin || draft.status !== 'IN_PROGRESS' || draft.current_turn_team_side !== 'A'}
+                            >
+                              Pick p/ A
+                            </button>
+                            <button
+                              onClick={() => pickDraft(item)}
+                              className="text-sm px-3 py-2 rounded border hover:bg-gray-50"
+                              disabled={!isAdmin || draft.status !== 'IN_PROGRESS' || draft.current_turn_team_side !== 'B'}
+                            >
+                              Pick p/ B
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {draft.remaining_pool.length === 0 && <div className="text-sm text-gray-500">Nenhum.</div>}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 border-t pt-4">
+                    <div className="font-bold mb-2">Picks</div>
+                    <div className="space-y-2">
+                      {draft.picks.map(p => (
+                        <div key={p.id} className="border rounded p-2 flex items-center justify-between">
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate">
+                              #{p.pick_number} • Team {p.team_side}:{' '}
+                              {p.item.type === 'MEMBER'
+                                ? p.item.nickname || p.item.user.full_name || p.item.user.email
+                                : p.item.name}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {draft.picks.length === 0 && <div className="text-sm text-gray-500">Nenhum pick ainda.</div>}
+                    </div>
+                  </div>
+
+                  {isAdmin && draft.status === 'IN_PROGRESS' && (
+                    <button onClick={finishDraft} className="mt-4 w-full border px-4 py-2 rounded hover:bg-gray-50">
+                      Finalizar draft
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

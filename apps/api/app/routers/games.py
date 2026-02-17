@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.game import Game, GameAttendance
-from app.models.organization import OrgMember, OrgRole
+from app.models.org_member import OrgMember, OrgRole
 from app.schemas.game import GameCreate, Game as GameSchema, AttendanceCreate, Attendance
 from app.routers.deps import get_current_user
 from app.models.user import User

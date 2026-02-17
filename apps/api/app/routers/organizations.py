@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.organization import Organization, OrgMember, OrgRole
-from app.schemas.organization import OrgCreate, Org, OrgMember as OrgMemberSchema
+from app.models.organization import Organization
+from app.models.org_member import OrgMember, OrgRole
+from app.schemas.organization import OrgCreate, Org
 from app.routers.deps import get_current_user
 from app.models.user import User
 from uuid import UUID, uuid4
@@ -54,20 +55,3 @@ def read_orgs(
         .all()
     )
     return orgs
-
-@router.get("/{org_id}/members", response_model=list[OrgMemberSchema])
-def read_members(
-    org_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    membership = (
-        db.query(OrgMember)
-        .filter(OrgMember.user_id == current_user.id, OrgMember.org_id == org_id)
-        .first()
-    )
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this organization")
-
-    members = db.query(OrgMember).filter(OrgMember.org_id == org_id).all()
-    return members

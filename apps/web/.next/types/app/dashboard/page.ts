@@ -1,4 +1,4 @@
-// File: /app/app/dashboard/page.tsx
+// File: C:\Users\Samuel F\Documents\projetos\sportsaas\apps\web\app\dashboard\page.tsx
 import * as entry from '../../../../app/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

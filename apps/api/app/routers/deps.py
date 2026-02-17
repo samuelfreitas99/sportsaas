@@ -13,7 +13,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.token import TokenData
 
-from app.models.organization import Organization, OrgMember
+from app.models.organization import Organization
+from app.models.org_member import OrgMember
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 

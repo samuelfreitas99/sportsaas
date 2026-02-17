@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 from app.db.session import get_db
 from app.models.ledger import LedgerEntry, LedgerType
-from app.models.organization import OrgMember, OrgRole
+from app.models.org_member import OrgMember, OrgRole
 from app.schemas.ledger import LedgerEntryCreate, LedgerEntry as LedgerEntrySchema
 from app.routers.deps import get_current_user
 from app.models.user import User

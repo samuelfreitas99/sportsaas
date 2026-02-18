@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.routers import auth, organizations, games, ledger, org_members, billing, users, guests, finance, internal_billing
-from app.db.session import engine
-from app.db.base_class import Base
-import app.db.base  # garante que os models foram importados
+#from app.db.session import engine
+#from app.db.base_class import Base
+#import app.db.base  # garante que os models foram importados
 
 
 app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
@@ -40,6 +40,6 @@ app.include_router(internal_billing.router, prefix="/api/v1", tags=["internal"])
 def read_root():
     return {"message": "Welcome to Sport SaaS API"}
 
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(bind=engine)
+#@app.on_event("startup")
+#def on_startup():
+#    Base.metadata.create_all(bind=engine)

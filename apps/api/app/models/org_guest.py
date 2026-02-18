@@ -12,15 +12,14 @@ from app.db.base_class import Base
 
 class OrgGuest(Base):
     __tablename__ = "org_guests"
-    __table_args__ = (
-        Index("ix_org_guests_org_id", "org_id"),
-    )
+    # __table_args__ = (Index("ix_org_guests_org_id", "org_id"),)  # REMOVIDO
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     org_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False, index=True
     )
+
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(64), nullable=True)

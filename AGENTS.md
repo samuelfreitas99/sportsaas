@@ -18,6 +18,13 @@ Guia operacional para agentes/IA no repositório SportSaaS.
    - não commitar `.next/`, `__pycache__/`, `.pyc`
    - atualizar `.gitignore` se necessário
 6) Em modelos com múltiplas FKs entre as mesmas tabelas, sempre declarar `foreign_keys` explicitamente nos relationships.
+7) Nunca usar Base.metadata.create_all() no startup em Postgres.
+DB schema é controlado por Alembic.
+create_all pode gerar conflitos de índices/DDL (ex.: DuplicateTable / DuplicateIndex).
+E adiciona também uma micro-regra sobre índices:
+8) Índices: não duplicar index=True com Index() do mesmo nome
+index=True já cria ix_<tabela>_<coluna>
+Index() manual só para índices compostos / customizados.
 
 
 ## Convenções

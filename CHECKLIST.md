@@ -188,13 +188,12 @@ Objetivo: validar sistema completo após cada fase.
   - PAID gera ledger_entry_id
   - smoke: scripts/smoke-billing-per-session.ps1
 
-* [ ] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP)
-* [ ] 2C.3 Integração ledger (dash / relatórios)
+* [x] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP) Feito Smoke Test smoke-billing-membership.ps1
+* [x] 2C.3 Integração ledger (dash / relatórios)
+  - endpoints: GET /finance/summary, GET /finance/recent
+  - smoke: scripts/smoke-finance-summary.ps1
 * [ ] 2C.4 Geração automática charges (agendada)
 * [ ] 2C.5 Dashboard financeiro por org
-
-
-
 
 ---
 

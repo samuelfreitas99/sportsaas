@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
+
 from pydantic import BaseModel
 
 from app.models.org_charge import ChargeStatus, ChargeType
@@ -8,11 +9,12 @@ from app.models.org_member import OrgRole
 
 
 class OrgChargeBase(BaseModel):
-    org_member_id: UUID
+    org_member_id: UUID 
     cycle_key: str
     type: ChargeType
     status: ChargeStatus
     amount: float
+    game_id: UUID | None = None
 
 
 class OrgChargeUser(BaseModel):

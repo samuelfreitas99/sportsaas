@@ -34,6 +34,10 @@ class OrgCharge(Base):
         ),
         Index("ix_org_charges_org_cycle", "org_id", "cycle_key"),
         Index("ix_org_charges_org_status", "org_id", "status"),
+
+        # ✅ você criou esses índices na migration 2c1, então faz sentido refletir aqui também
+        Index("ix_org_charges_game_id", "game_id"),
+        Index("ix_org_charges_org_game", "org_id", "game_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -43,6 +47,13 @@ class OrgCharge(Base):
     )
     org_member_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=False, index=True
+    )
+
+    # ✅ NOVO (Phase 2C.1)
+    game_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("games.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     cycle_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -76,7 +87,11 @@ class OrgCharge(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    # relationships
     organization = relationship("Organization")
     org_member = relationship("OrgMember")
     ledger_entry = relationship("LedgerEntry")
     created_by = relationship("User", foreign_keys=[created_by_id])
+
+    # ✅ opcional, mas recomendado
+    game = relationship("Game")

@@ -193,14 +193,20 @@ def generate_charges(
     created = 0
     skipped = 0
 
-    def ensure_charge(member: OrgMember, charge_type: ChargeType, amount: float) -> None:
+    def ensure_charge(
+        member: OrgMember,
+        charge_type: ChargeType,
+        amount: float,
+        cycle_key_value: str,
+        game_id: UUID | None = None,
+    ) -> None:
         nonlocal created, skipped
         existing = (
             db.query(OrgCharge)
             .filter(
                 OrgCharge.org_id == org_id,
                 OrgCharge.org_member_id == member.id,
-                OrgCharge.cycle_key == cycle_key,
+                OrgCharge.cycle_key == cycle_key_value,
                 OrgCharge.type == charge_type,
             )
             .first()
@@ -213,6 +219,8 @@ def generate_charges(
                 skipped += 1
                 return
             existing.amount = amount
+            if hasattr(existing, "game_id"):
+                existing.game_id = game_id
             if existing.status == ChargeStatus.VOID:
                 existing.status = ChargeStatus.PENDING
                 existing.voided_at = None
@@ -222,41 +230,65 @@ def generate_charges(
         charge = OrgCharge(
             org_id=org_id,
             org_member_id=member.id,
-            cycle_key=cycle_key,
+            cycle_key=cycle_key_value,
             type=charge_type,
             status=ChargeStatus.PENDING,
             amount=amount,
             created_by_id=current_user.id,
         )
+        # só seta se existir no model (você já adicionou)
+        if hasattr(charge, "game_id"):
+            charge.game_id = game_id
+
         db.add(charge)
         created += 1
+
 
     if settings.billing_mode in (BillingMode.MEMBERSHIP, BillingMode.HYBRID):
         for m in members:
             if m.member_type == MemberType.MONTHLY:
-                ensure_charge(m, ChargeType.MEMBERSHIP, float(settings.membership_amount))
+                ensure_charge(
+                    m,
+                    ChargeType.MEMBERSHIP,
+                    float(settings.membership_amount),
+                    cycle_key_value=cycle_key,
+                )
+
 
     if settings.billing_mode in (BillingMode.PER_SESSION, BillingMode.HYBRID):
-        for m in members:
-            if m.member_type != MemberType.GUEST:
-                continue
-            count = (
-                db.query(func.count(GameAttendance.id))
-                .join(Game, Game.id == GameAttendance.game_id)
-                .filter(
-                    Game.org_id == org_id,
-                    Game.start_at >= start_dt,
-                    Game.start_at < end_dt,
-                    GameAttendance.user_id == m.user_id,
-                    GameAttendance.status == AttendanceStatus.GOING,
-                )
-                .scalar()
-                or 0
+        # Para cada jogo do período, cria 1 charge PER_SESSION por membro GUEST com GOING
+        rows = (
+            db.query(Game.id.label("game_id"), OrgMember.id.label("org_member_id"))
+            .join(GameAttendance, GameAttendance.game_id == Game.id)
+            .join(
+                OrgMember,
+                (OrgMember.org_id == Game.org_id) & (OrgMember.user_id == GameAttendance.user_id),
             )
-            amount = float(settings.session_amount) * float(count)
-            if amount <= 0:
+            .filter(
+                Game.org_id == org_id,
+                Game.start_at >= start_dt,
+                Game.start_at < end_dt,
+                GameAttendance.status == AttendanceStatus.GOING,
+                OrgMember.member_type == MemberType.GUEST,
+            )
+            .distinct()
+            .all()
+        )
+
+        for r in rows:
+            member = next((m for m in members if m.id == r.org_member_id), None)
+            if not member:
                 continue
-            ensure_charge(m, ChargeType.PER_SESSION, amount)
+
+            game_cycle_key = f"GAME:{r.game_id}"
+            ensure_charge(
+                member,
+                ChargeType.PER_SESSION,
+                float(settings.session_amount),
+                cycle_key_value=game_cycle_key,
+                game_id=r.game_id,
+            )
+
 
     db.commit()
     return {"cycle_key": cycle_key, "created": created, "skipped": skipped}

@@ -188,6 +188,16 @@ Objetivo: validar sistema completo após cada fase.
 * [ ] Geração automática charges
 * [ ] Dashboard financeiro por org
 
+## 🟡 2C.1 Cobrança por presença (PER_SESSION)
+
+* [ ] org_charges.game_id (migration + FK + indexes)
+* [ ] OrgCharge model inclui game_id
+* [ ] ChargeOut/listagem inclui game_id
+* [ ] charges/generate cria PER_SESSION para (member_type=GUEST && attendance=GOING) com cycle_key=GAME:{game_id}
+* [ ] Smoke: scripts/smoke-billing-per-session.ps1
+
+
+
 ---
 
 # 🏟 Fase 3 — Marketplace

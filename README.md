@@ -1,16 +1,18 @@
 # Sport SaaS
 
 Plataforma SaaS para gestão esportiva:
-- Grupos organizam jogos, presença e financeiro
-- (Em breve) Centros esportivos gerenciam quadras e reservas estilo “Airbnb”
+- Grupos organizam jogos, presença, convidados, times, draft e financeiro
+- (Em breve) Centros esportivos gerenciam unidades/quadras/reservas estilo “Airbnb”
 
 ## Stack
 - Backend: FastAPI (Python 3.11) + SQLAlchemy 2.0 + Alembic
-- Database: PostgreSQL 15
+- DB: PostgreSQL 15
 - Frontend: Next.js 14 + TypeScript + Tailwind
 - Infra: Docker Compose
 
-## Quick start
+---
+
+## Quick start (dev)
 
 ### 1) Subir tudo
 ```bash
@@ -20,61 +22,51 @@ docker compose exec api alembic upgrade head
 3) Acessos
 Web: http://localhost:3000
 
-API: http://localhost:8000
+API: http://localhost:8000/api/v1
 
 Swagger: http://localhost:8000/docs
 
-Fases implementadas (resumo)
-Phase 2B.1 — Attendance org-scoped
-GET/PUT /api/v1/orgs/{org_id}/games/{game_id}/attendance
+Smoke tests (PowerShell)
+Os testes ficam em scripts/.
 
-Status: GOING | MAYBE | NOT_GOING
+Billing
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-billing-per-session.ps1 -Email "SEU_EMAIL" -Pass "SUA_SENHA" -OrgId "ORG_ID"
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-billing-membership.ps1   -Email "SEU_EMAIL" -Pass "SUA_SENHA" -OrgId "ORG_ID"
+Finance
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-finance-summary.ps1   -Email "SEU_EMAIL" -Pass "SUA_SENHA" -OrgId "ORG_ID"
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-finance-dashboard.ps1 -Email "SEU_EMAIL" -Pass "SUA_SENHA" -OrgId "ORG_ID"
+Internal billing (trigger)
+Requer header X-Internal-Key e INTERNAL_KEY configurado no backend.
 
-Phase 2B.2 — Guests
-org_guests (catálogo por org) e game_guests (snapshot por jogo)
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-billing-internal-run.ps1
+Status atual (resumo)
+Fase 2B — Social Completo ✅
+Attendance org-scoped
 
-game_guest sempre billable=true
+Guests (org_guests / game_guests)
 
-Phase 2B.3 — MemberType (MONTHLY vs GUEST)
-OrgMember.member_type: MONTHLY | GUEST
+MemberType (MONTHLY vs GUEST)
 
-Attendance retorna flags: included e billable
+Game details
 
-Phase 2B.8 — Game Details
-GET /api/v1/orgs/{org_id}/games/{game_id} com:
+Capitães + Times A/B
 
-detalhes do jogo
+Draft v1 persistido (sem realtime)
 
-attendance list/summary
+RBAC refinado
 
-convidados do jogo
+Smoke tests consolidados
 
-capitães e times (A/B)
+Fase 2C — Billing / Finance ✅ (Backend)
+Charges: MEMBERSHIP + PER_SESSION (por jogo)
 
-resumo do draft
+Ledger auto ao pagar charge
 
-Phase 2B.9 — Capitães e Times (MVP A/B)
-PUT /captains (MANUAL/RANDOM)
+Finance endpoints: summary/recent/dashboard + filtros
 
-GET/PUT /teams (A/B/null)
+Trigger interno: /internal/billing/run + smoke
 
-Nota: MVP atual é A/B; roadmap: N times.
+Próximo passo
+Fase 2C.6: Frontend do dashboard financeiro (cards + filtros + gráfico + recent)
 
-Phase 2B.10 — Draft v1 (persistido, sem realtime)
-POST /draft/start
-
-POST /draft/pick
-
-POST /draft/finish
-
-GET /draft
-
-Ordem ABBA e picks persistidos; atualiza times automaticamente.
-
-Phase 2B.11 — RBAC refinado
-MEMBER: pode ver jogos/draft e marcar presença
-
-ADMIN/OWNER: pode criar jogo, gerenciar convidados, capitães/times e draft
-
-Smoke tests (Phase 2B.12)
-Os testes automatizados ficam em scripts/ e rodam via PowerShell.
+Depois: Fase 3 Marketplace

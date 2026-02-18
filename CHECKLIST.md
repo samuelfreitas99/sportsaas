@@ -75,8 +75,8 @@
 
 ⚠️ **Pendência (2C — Billing)**
 
-* [ ] Cobrança por ciclo (MONTHLY)
-* [ ] Cobrança por presença (GUEST)
+* [x] Cobrança por ciclo (MONTHLY)
+* [x] Cobrança por presença (PER_SESSION)
 
 ---
 
@@ -191,23 +191,32 @@ Objetivo: validar sistema completo após cada fase.
 * [x] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP)
   - smoke: scripts/smoke-billing-membership.ps1
 
-* [x] 2C.3 Integração ledger (dash / relatórios)
-  - endpoints: GET /finance/summary, GET /finance/recent
+* [x] 2C.3 Integração ledger + relatórios (Backend)
+  - endpoints:
+    - GET /orgs/{org_id}/finance/summary
+    - GET /orgs/{org_id}/finance/recent
   - smoke: scripts/smoke-finance-summary.ps1
 
 * [x] 2C.4 Geração automática charges (trigger interno)
-  - endpoint interno: POST /internal/billing/run (X-Internal-Key)
+  - endpoint interno: POST /internal/billing/run (header: X-Internal-Key)
   - reuso da lógica via função core (_generate_charges_core) no billing.py
   - smoke: scripts/smoke-billing-internal-run.ps1
 
-* [ ] 2C.5 Dashboard financeiro por org
+* [x] 2C.5 Dashboard financeiro por org (Backend)
   - API pronta:
-    - GET /finance/dashboard com filtro por período
+    - GET /orgs/{org_id}/finance/summary
+    - GET /orgs/{org_id}/finance/recent
+    - GET /orgs/{org_id}/finance/dashboard?start=&end=
+  - suporte a filtro por período
   - smoke: scripts/smoke-finance-dashboard.ps1
   - frontend pendente (cards/gráficos/filtros visuais)
 
-
-
+* [ ] 2C.6 Dashboard financeiro por org (Frontend)
+  - página no web: /app/orgs/[orgId]/finance (ou /dashboard/finance)
+  - cards: income, expense, balance, pending_total, paid_total
+  - lista “recent” (ledger + charges)
+  - filtro período (start/end)
+  - gráfico simples (evolução do saldo ou income/expense por dia)
 
 ---
 

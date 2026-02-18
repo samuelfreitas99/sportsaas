@@ -182,19 +182,17 @@ Objetivo: validar sistema completo após cada fase.
 
 # 💰 Fase 2C — Cofre / Billing Inteligente
 
-* [ ] Cobrança ciclo MONTHLY
-* [ ] Cobrança por presença GUEST
-* [ ] Integração ledger
-* [ ] Geração automática charges
-* [ ] Dashboard financeiro por org
+* [x] 2C.1 Cobrança por presença (PER_SESSION por jogo)
+  - org_charges.game_id + indexes + FK
+  - generate cria PER_SESSION com cycle_key=GAME:{game_id}
+  - PAID gera ledger_entry_id
+  - smoke: scripts/smoke-billing-per-session.ps1
 
-## 🟡 2C.1 Cobrança por presença (PER_SESSION)
+* [ ] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP)
+* [ ] 2C.3 Integração ledger (dash / relatórios)
+* [ ] 2C.4 Geração automática charges (agendada)
+* [ ] 2C.5 Dashboard financeiro por org
 
-* [ ] org_charges.game_id (migration + FK + indexes)
-* [ ] OrgCharge model inclui game_id
-* [ ] ChargeOut/listagem inclui game_id
-* [ ] charges/generate cria PER_SESSION para (member_type=GUEST && attendance=GOING) com cycle_key=GAME:{game_id}
-* [ ] Smoke: scripts/smoke-billing-per-session.ps1
 
 
 

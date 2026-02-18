@@ -51,17 +51,27 @@ function Login {
     [Parameter(Mandatory=$true)][string] $Email,
     [Parameter(Mandatory=$true)][string] $Pass
   )
+
+  $apiBase = $Api.TrimEnd("/")
+
   # OAuth2PasswordRequestForm (x-www-form-urlencoded)
-  $login = Invoke-Api -Method "POST" -Url "$Api/auth/login" -Headers @{} `
+  $form = @{
+    username   = $Email
+    password   = $Pass
+    grant_type = "password"
+  }
+
+  $login = Invoke-Api -Method "POST" -Url "$apiBase/auth/login" `
     -ContentType "application/x-www-form-urlencoded" `
-    -Body "username=$Email&password=$Pass"
+    -Body $form
 
   if (-not $login.access_token) {
     throw "Login não retornou access_token."
   }
 
   $headers = @{ Authorization = "Bearer $($login.access_token)" }
-  $me = Invoke-Api -Method "GET" -Url "$Api/users/me" -Headers $headers
+  $me = Invoke-Api -Method "GET" -Url "$apiBase/users/me" -Headers $headers
+
   return @{
     token = $login.access_token
     headers = $headers
@@ -69,6 +79,7 @@ function Login {
     raw = $login
   }
 }
+
 
 function Get-FirstGameId {
   param(

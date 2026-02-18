@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Sport SaaS"
     DATABASE_URL: str = "postgresql://postgres:postgres@db:5432/sportsaas"
     SECRET_KEY: str = "supersecretkey"
+    INTERNAL_KEY: str = "troque_isto"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 

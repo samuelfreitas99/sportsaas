@@ -188,12 +188,26 @@ Objetivo: validar sistema completo após cada fase.
   - PAID gera ledger_entry_id
   - smoke: scripts/smoke-billing-per-session.ps1
 
-* [x] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP) Feito Smoke Test smoke-billing-membership.ps1
+* [x] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP)
+  - smoke: scripts/smoke-billing-membership.ps1
+
 * [x] 2C.3 Integração ledger (dash / relatórios)
   - endpoints: GET /finance/summary, GET /finance/recent
   - smoke: scripts/smoke-finance-summary.ps1
-* [ ] 2C.4 Geração automática charges (agendada)
+
+* [x] 2C.4 Geração automática charges (trigger interno)
+  - endpoint interno: POST /internal/billing/run (X-Internal-Key)
+  - reuso da lógica via função core (_generate_charges_core) no billing.py
+  - smoke: scripts/smoke-billing-internal-run.ps1
+
 * [ ] 2C.5 Dashboard financeiro por org
+  - API pronta:
+    - GET /finance/dashboard com filtro por período
+  - smoke: scripts/smoke-finance-dashboard.ps1
+  - frontend pendente (cards/gráficos/filtros visuais)
+
+
+
 
 ---
 

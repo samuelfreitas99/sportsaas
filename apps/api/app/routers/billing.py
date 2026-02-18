@@ -175,6 +175,8 @@ def put_billing_settings(
     return settings
 
 
+
+
 @router.post("/orgs/{org_id}/charges/generate")
 def generate_charges(
     org_id: UUID,
@@ -185,113 +187,15 @@ def generate_charges(
     require_org_member(org_id=org_id, db=db, current_user=current_user)
     _require_billing_manager(db=db, org_id=org_id, current_user=current_user)
 
-    settings = _get_or_create_settings(db=db, org_id=org_id)
-    cycle_key, start_dt, end_dt = _compute_cycle(settings=settings, cycle_key=payload.cycle_key)
-
-    members: list[OrgMember] = db.query(OrgMember).filter(OrgMember.org_id == org_id).all()
-
-    created = 0
-    skipped = 0
-
-    def ensure_charge(
-        member: OrgMember,
-        charge_type: ChargeType,
-        amount: float,
-        cycle_key_value: str,
-        game_id: UUID | None = None,
-    ) -> None:
-        nonlocal created, skipped
-        existing = (
-            db.query(OrgCharge)
-            .filter(
-                OrgCharge.org_id == org_id,
-                OrgCharge.org_member_id == member.id,
-                OrgCharge.cycle_key == cycle_key_value,
-                OrgCharge.type == charge_type,
-            )
-            .first()
-        )
-        if existing:
-            if existing.status == ChargeStatus.PAID:
-                skipped += 1
-                return
-            if not payload.force:
-                skipped += 1
-                return
-            existing.amount = amount
-            if hasattr(existing, "game_id"):
-                existing.game_id = game_id
-            if existing.status == ChargeStatus.VOID:
-                existing.status = ChargeStatus.PENDING
-                existing.voided_at = None
-            skipped += 1
-            return
-
-        charge = OrgCharge(
-            org_id=org_id,
-            org_member_id=member.id,
-            cycle_key=cycle_key_value,
-            type=charge_type,
-            status=ChargeStatus.PENDING,
-            amount=amount,
-            created_by_id=current_user.id,
-        )
-        # só seta se existir no model (você já adicionou)
-        if hasattr(charge, "game_id"):
-            charge.game_id = game_id
-
-        db.add(charge)
-        created += 1
+    return _generate_charges_core(
+        db=db,
+        org_id=org_id,
+        force=payload.force,
+        cycle_key_override=payload.cycle_key,
+        created_by_id=current_user.id,
+    )
 
 
-    if settings.billing_mode in (BillingMode.MEMBERSHIP, BillingMode.HYBRID):
-        for m in members:
-            if m.member_type == MemberType.MONTHLY:
-                ensure_charge(
-                    m,
-                    ChargeType.MEMBERSHIP,
-                    float(settings.membership_amount),
-                    cycle_key_value=cycle_key,
-                )
-
-
-    if settings.billing_mode in (BillingMode.PER_SESSION, BillingMode.HYBRID):
-        # Para cada jogo do período, cria 1 charge PER_SESSION por membro GUEST com GOING
-        rows = (
-            db.query(Game.id.label("game_id"), OrgMember.id.label("org_member_id"))
-            .join(GameAttendance, GameAttendance.game_id == Game.id)
-            .join(
-                OrgMember,
-                (OrgMember.org_id == Game.org_id) & (OrgMember.user_id == GameAttendance.user_id),
-            )
-            .filter(
-                Game.org_id == org_id,
-                Game.start_at >= start_dt,
-                Game.start_at < end_dt,
-                GameAttendance.status == AttendanceStatus.GOING,
-                OrgMember.member_type == MemberType.GUEST,
-            )
-            .distinct()
-            .all()
-        )
-
-        for r in rows:
-            member = next((m for m in members if m.id == r.org_member_id), None)
-            if not member:
-                continue
-
-            game_cycle_key = f"GAME:{r.game_id}"
-            ensure_charge(
-                member,
-                ChargeType.PER_SESSION,
-                float(settings.session_amount),
-                cycle_key_value=game_cycle_key,
-                game_id=r.game_id,
-            )
-
-
-    db.commit()
-    return {"cycle_key": cycle_key, "created": created, "skipped": skipped}
 
 
 @router.get("/orgs/{org_id}/charges", response_model=list[OrgChargeResponse])
@@ -383,3 +287,121 @@ def update_charge_status(
         return charge
 
     raise HTTPException(status_code=400, detail="Unsupported status transition")
+
+def _generate_charges_core(
+    *,
+    db: Session,
+    org_id: UUID,
+    force: bool,
+    cycle_key_override: str | None,
+    created_by_id: UUID | None,
+) -> dict:
+    settings = _get_or_create_settings(db=db, org_id=org_id)
+    cycle_key, start_dt, end_dt = _compute_cycle(settings=settings, cycle_key=cycle_key_override)
+
+    members: list[OrgMember] = db.query(OrgMember).filter(OrgMember.org_id == org_id).all()
+
+    created = 0
+    skipped = 0
+
+    def ensure_charge(
+        member: OrgMember,
+        charge_type: ChargeType,
+        amount: float,
+        cycle_key_value: str,
+        game_id: UUID | None = None,
+    ) -> None:
+        nonlocal created, skipped
+
+        existing = (
+            db.query(OrgCharge)
+            .filter(
+                OrgCharge.org_id == org_id,
+                OrgCharge.org_member_id == member.id,
+                OrgCharge.cycle_key == cycle_key_value,
+                OrgCharge.type == charge_type,
+            )
+            .first()
+        )
+
+        if existing:
+            if existing.status == ChargeStatus.PAID:
+                skipped += 1
+                return
+            if not force:
+                skipped += 1
+                return
+
+            existing.amount = amount
+            existing.game_id = game_id
+
+            if existing.status == ChargeStatus.VOID:
+                existing.status = ChargeStatus.PENDING
+                existing.voided_at = None
+
+            skipped += 1
+            return
+
+        charge = OrgCharge(
+            org_id=org_id,
+            org_member_id=member.id,
+            cycle_key=cycle_key_value,
+            type=charge_type,
+            status=ChargeStatus.PENDING,
+            amount=amount,
+            created_by_id=created_by_id,
+            game_id=game_id,
+        )
+        db.add(charge)
+        created += 1
+
+    # MEMBERSHIP (MONTHLY)
+    if settings.billing_mode in (BillingMode.MEMBERSHIP, BillingMode.HYBRID):
+        for m in members:
+            if m.member_type == MemberType.MONTHLY:
+                ensure_charge(
+                    m,
+                    ChargeType.MEMBERSHIP,
+                    float(settings.membership_amount),
+                    cycle_key_value=cycle_key,
+                )
+
+    # PER_SESSION (por jogo)
+    if settings.billing_mode in (BillingMode.PER_SESSION, BillingMode.HYBRID):
+        rows = (
+            db.query(Game.id.label("game_id"), OrgMember.id.label("org_member_id"))
+            .join(GameAttendance, GameAttendance.game_id == Game.id)
+            .join(
+                OrgMember,
+                (OrgMember.org_id == Game.org_id) & (OrgMember.user_id == GameAttendance.user_id),
+            )
+            .filter(
+                Game.org_id == org_id,
+                Game.start_at >= start_dt,
+                Game.start_at < end_dt,
+                GameAttendance.status == AttendanceStatus.GOING,
+                OrgMember.member_type == MemberType.GUEST,
+            )
+            .distinct()
+            .all()
+        )
+
+        # map rápido pra evitar next(...) N vezes
+        members_by_id = {m.id: m for m in members}
+
+        for r in rows:
+            member = members_by_id.get(r.org_member_id)
+            if not member:
+                continue
+
+            game_cycle_key = f"GAME:{r.game_id}"
+            ensure_charge(
+                member,
+                ChargeType.PER_SESSION,
+                float(settings.session_amount),
+                cycle_key_value=game_cycle_key,
+                game_id=r.game_id,
+            )
+
+    db.commit()
+    return {"cycle_key": cycle_key, "created": created, "skipped": skipped}

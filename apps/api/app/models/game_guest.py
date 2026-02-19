@@ -14,8 +14,8 @@ class GameGuest(Base):
     __tablename__ = "game_guests"
     __table_args__ = (
         Index("ix_game_guests_org_game", "org_id", "game_id"),
-        Index("ix_game_guests_game_id", "game_id"),
     )
+
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 

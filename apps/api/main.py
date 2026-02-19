@@ -10,18 +10,21 @@ from app.routers import auth, organizations, games, ledger, org_members, billing
 app = FastAPI(title=settings.PROJECT_NAME, version="0.1.0")
 
 # Set all CORS enabled origins
+
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://10.0.29.107:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-    ],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 

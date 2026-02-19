@@ -30,7 +30,10 @@ services:
       SECRET_KEY: supersecretkey
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      CORS_ORIGINS: "http://localhost:3000,http://localhost:3001"
+      REFRESH_TOKEN_EXPIRE_MINUTES: 43200
+      CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: "lax"
     depends_on:
       db:
         condition: service_healthy
@@ -42,14 +45,19 @@ services:
     command: npm run dev -- -p 3000
     volumes:
       - ./apps/web:/app
-      - /app/node_modules
-      - /app/.next
+      - web_node_modules:/app/node_modules
+      - web_next_cache:/app/.next
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: "http://localhost:8000/api/v1"
+
     depends_on:
       - api
 
+
 volumes:
   postgres_data:
+  web_node_modules:
+  web_next_cache:
+

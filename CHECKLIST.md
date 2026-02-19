@@ -180,43 +180,132 @@ Objetivo: validar sistema completo após cada fase.
 
 ---
 
+Perfeito — dá pra deixar **bem mais “clean” e sem duplicidade**, e já encaixar a parte **Auth definitiva (cookies + sessões)** dentro da 2D (porque isso é base do app), e deixar a **PWA** como 2E mesmo, antes do Marketplace.
+
+Abaixo vai a **versão atualizada** dessa parte “de baixo” do checklist (já removendo repetição da 2E e deixando 2F só como placeholder).
+
+---
+
 # 💰 Fase 2C — Cofre / Billing Inteligente
 
 * [x] 2C.1 Cobrança por presença (PER_SESSION por jogo)
-  - org_charges.game_id + indexes + FK
-  - generate cria PER_SESSION com cycle_key=GAME:{game_id}
-  - PAID gera ledger_entry_id
-  - smoke: scripts/smoke-billing-per-session.ps1
+
+  * org_charges.game_id + indexes + FK
+  * generate cria PER_SESSION com cycle_key=GAME:{game_id}
+  * PAID gera ledger_entry_id
+  * smoke: scripts/smoke-billing-per-session.ps1
 
 * [x] 2C.2 Cobrança ciclo MONTHLY (MEMBERSHIP)
-  - smoke: scripts/smoke-billing-membership.ps1
+
+  * smoke: scripts/smoke-billing-membership.ps1
 
 * [x] 2C.3 Integração ledger + relatórios (Backend)
-  - endpoints:
-    - GET /orgs/{org_id}/finance/summary
-    - GET /orgs/{org_id}/finance/recent
-  - smoke: scripts/smoke-finance-summary.ps1
+
+  * endpoints:
+
+    * GET /orgs/{org_id}/finance/summary
+    * GET /orgs/{org_id}/finance/recent
+  * smoke: scripts/smoke-finance-summary.ps1
 
 * [x] 2C.4 Geração automática charges (trigger interno)
-  - endpoint interno: POST /internal/billing/run (header: X-Internal-Key)
-  - reuso da lógica via função core (_generate_charges_core) no billing.py
-  - smoke: scripts/smoke-billing-internal-run.ps1
+
+  * endpoint interno: POST /internal/billing/run (header: X-Internal-Key)
+  * reuso da lógica via função core (_generate_charges_core) no billing.py
+  * smoke: scripts/smoke-billing-internal-run.ps1
 
 * [x] 2C.5 Dashboard financeiro por org (Backend)
-  - API pronta:
-    - GET /orgs/{org_id}/finance/summary
-    - GET /orgs/{org_id}/finance/recent
-    - GET /orgs/{org_id}/finance/dashboard?start=&end=
-  - suporte a filtro por período
-  - smoke: scripts/smoke-finance-dashboard.ps1
-  - frontend pendente (cards/gráficos/filtros visuais)
+
+  * API pronta:
+
+    * GET /orgs/{org_id}/finance/summary
+    * GET /orgs/{org_id}/finance/recent
+    * GET /orgs/{org_id}/finance/dashboard?start=&end=
+  * suporte a filtro por período
+  * smoke: scripts/smoke-finance-dashboard.ps1
 
 * [ ] 2C.6 Dashboard financeiro por org (Frontend)
-  - página no web: /app/orgs/[orgId]/finance (ou /dashboard/finance)
-  - cards: income, expense, balance, pending_total, paid_total
-  - lista “recent” (ledger + charges)
-  - filtro período (start/end)
-  - gráfico simples (evolução do saldo ou income/expense por dia)
+
+  * rota definitiva: /app/orgs/[orgId]/finance
+  * cards: income, expense, balance, pending_total, paid_total
+  * lista “recent” (ledger + charges)
+  * filtro período (start/end)
+  * gráfico simples (saldo ou income/expense por dia)
+
+---
+
+## 🧭 Fase 2D — Frontend Definitivo (Base do App)
+
+* [x] 2D.1 Estrutura de rotas do app (org-scoped)
+
+  * /app/orgs/[orgId]/...
+  * layouts base (app + org)
+
+* [ ] 2D.2 Auth definitiva (Cookies HTTPOnly) — **MVP seguro**
+
+  * backend: cookies access/refresh + CORS credentials
+  * endpoints: /auth/me, /auth/refresh, /auth/logout
+  * frontend: axios `withCredentials`, remover localStorage token
+  * guard de rota (redirect quando não autenticado)
+
+* [ ] 2D.3 Sessões (refresh revogável no banco) — **definitivo**
+
+  * migration: tabela `auth_sessions` (hash do refresh + revogação)
+  * logout revoga sessão + limpa cookies
+  * smoke: script simples de login/refresh/logout (opcional)
+
+* [ ] 2D.4 API client único (web)
+
+  * baseURL por env (dev/prod)
+  * interceptors: 401 → tenta refresh → retry → fallback logout
+  * padronizar erros/toasts (mínimo)
+
+* [ ] 2D.5 Módulo Finance real (2C.6) ✅ (primeiro módulo definitivo)
+
+  * page + cards + lista + filtros + gráfico simples
+  * consumir endpoints reais `/orgs/{org_id}/finance/*`
+
+* [ ] 2D.6 Games real (lista + detalhe)
+
+  * consumir endpoints reais
+  * ações (presença, convidados, times, draft)
+
+* [ ] 2D.7 Members/Guests real (não experimental)
+
+  * membros + badges + editar member_type
+  * org_guests + game_guests
+
+---
+
+## 📱 Fase 2E — PWA Base (antes do Marketplace)
+
+* [ ] 2E.1 Manifest + ícones
+
+  * `app/manifest.ts` (name, short_name, start_url, display, theme_color)
+  * ícones `public/icons/*` (192/512 + maskable)
+  * metadata no layout (theme-color / apple-web-app)
+
+* [ ] 2E.2 Service Worker (cache básico)
+
+  * estratégia: cache “app shell” + network-first para API
+  * página offline fallback
+  * teste: “Add to Home Screen” + reload offline
+
+* [ ] 2E.3 UX PWA
+
+  * detectar instalação / prompt (opcional)
+  * ajustes mobile (safe areas, scroll, touch targets)
+
+* [ ] 2E.4 Observabilidade mínima
+
+  * log de erro client-side (console + placeholder p/ tool futura)
+
+---
+
+## 🔔 Fase 2F — Push Notifications (placeholder)
+
+* [ ] 2F.1 Modelagem + opt-in
+* [ ] 2F.2 Envio básico (ex.: lembrete de jogo)
+* [ ] 2F.3 Preferências por usuário/org
 
 ---
 

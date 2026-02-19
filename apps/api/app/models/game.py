@@ -37,12 +37,8 @@ class Game(Base):
     captain_b_member_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("org_members.id"), nullable=True, index=True
     )
-    captain_a_guest_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("game_guests.id"), nullable=True, index=True
-    )
-    captain_b_guest_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("game_guests.id"), nullable=True, index=True
-    )
+    captain_a_guest_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    captain_b_guest_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -52,8 +48,8 @@ class Game(Base):
     created_by_member = relationship("OrgMember", foreign_keys=[created_by_member_id])
     captain_a_member = relationship("OrgMember", foreign_keys=[captain_a_member_id])
     captain_b_member = relationship("OrgMember", foreign_keys=[captain_b_member_id])
-    captain_a_guest = relationship("GameGuest", foreign_keys=[captain_a_guest_id])
-    captain_b_guest = relationship("GameGuest", foreign_keys=[captain_b_guest_id])
+    #captain_a_guest = relationship("GameGuest", foreign_keys=[captain_a_guest_id])
+    #captain_b_guest = relationship("GameGuest", foreign_keys=[captain_b_guest_id])
     attendances = relationship("GameAttendance", back_populates="game", cascade="all, delete-orphan")
 
 
@@ -90,3 +86,6 @@ class GameAttendance(Base):
     game = relationship("Game", back_populates="attendances", foreign_keys=[game_id],)
     user = relationship("User")
     org_member = relationship("OrgMember")
+
+# NOTE: captain_*_guest_id intentionally has NO FK to avoid circular FK with game_guests <-> games.
+# Validate existence in service layer when setting these fields

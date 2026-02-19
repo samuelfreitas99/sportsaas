@@ -33,6 +33,7 @@ Index() manual só para índices compostos / customizados.
 - Org-scoped: /api/v1/orgs/{org_id}/...
 - RBAC: OWNER > ADMIN > MEMBER
 - MemberType: MONTHLY (mensalista) vs GUEST (convidado/avulso)
+ - Auth cookies: usar Cookies HTTPOnly (access + refresh). Frontend deve usar axios/fetch com withCredentials e NUNCA armazenar token em localStorage.
 
 ## Roadmap (alto nível)
 - Fase 1: Core social (orgs, members, games, attendance, ledger) ✅
